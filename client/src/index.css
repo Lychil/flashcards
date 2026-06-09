@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+
+  --color-surface: #ffffff;
+  --color-surface-subtle: #fafbfc;
+  --color-surface-muted: #f4f5f7;
+  --color-border: #eceef1;
+  --color-border-subtle: #f0f1f3;
+  --color-text-primary: #1a1d21;
+  --color-text-secondary: #5c6370;
+  --color-text-tertiary: #9aa1ad;
+  --color-accent: #0a1225;
+  --color-accent-muted: #f0f2f7;
+  --color-badge: #e8ecf4;
+
+  --shadow-card: 0 1px 2px rgba(26, 29, 33, 0.03), 0 4px 16px rgba(26, 29, 33, 0.04);
+  --shadow-card-hover: 0 2px 6px rgba(26, 29, 33, 0.05), 0 10px 28px rgba(26, 29, 33, 0.07);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light only;
+  background-color: #ffffff;
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  font-family: var(--font-sans);
+  background-color: #ffffff;
+  color: var(--color-text-primary);
+}
+
+#root {
+  height: 100%;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.flashcard-scene {
+  perspective: 1200px;
+}
+
+.flashcard-inner {
+  position: relative;
+  width: 100%;
+  min-height: 280px;
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 640px) {
+  .flashcard-inner {
+    min-height: 320px;
+  }
+}
+
+.flashcard-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.flashcard-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flashcard-back {
+  transform: rotateY(180deg);
+}
