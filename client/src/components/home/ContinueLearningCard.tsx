@@ -2,7 +2,7 @@ import { ArrowRight, FileText, ImageIcon } from 'lucide-react'
 import { getCardColorTheme, resolveModuleBaseColor } from '../../lib/cardColor'
 import { formatLastReviewed } from '../../lib/formatRelativeTime'
 import type { Module } from '../../types/module'
-import { homeInteractiveClass, homeLabelClass } from './homeStyles'
+import { moduleInteractiveClass, moduleLabelClass } from './homeStyles'
 
 interface ContinueLearningCardProps {
   module: Module
@@ -17,7 +17,7 @@ export function ContinueLearningCard({ module }: ContinueLearningCardProps) {
       type="button"
       className={[
         'group w-full cursor-pointer rounded-[22px] border border-border bg-white p-5 text-left',
-        homeInteractiveClass,
+        moduleInteractiveClass,
       ].join(' ')}
       style={{
         backgroundImage: `linear-gradient(135deg, #ffffff 0%, ${theme.base}12 100%)`,
@@ -36,7 +36,7 @@ export function ContinueLearningCard({ module }: ContinueLearningCardProps) {
             )}
           </div>
           <div className="min-w-0">
-            <p className={`${homeLabelClass} mb-1`}>Продолжить</p>
+            <p className={`${moduleLabelClass} mb-1`}>Продолжить</p>
             <h3 className="mb-0.5 truncate text-[17px] font-semibold tracking-[-0.02em] text-text-primary">
               {module.title}
             </h3>

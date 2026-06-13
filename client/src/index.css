@@ -4,19 +4,19 @@
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
 
   --color-surface: #ffffff;
-  --color-surface-subtle: #fafbfc;
-  --color-surface-muted: #f4f5f7;
-  --color-border: #eceef1;
-  --color-border-subtle: #f0f1f3;
-  --color-text-primary: #1a1d21;
-  --color-text-secondary: #5c6370;
-  --color-text-tertiary: #9aa1ad;
+  --color-surface-subtle: #f5f7fa;
+  --color-surface-muted: #ebedf2;
+  --color-border: #d4d9e0;
+  --color-border-subtle: #e2e6ec;
+  --color-text-primary: #12151a;
+  --color-text-secondary: #3a4150;
+  --color-text-tertiary: #5f6778;
   --color-accent: #0a1225;
-  --color-accent-muted: #f0f2f7;
-  --color-badge: #e8ecf4;
+  --color-accent-muted: #eef0ff;
+  --color-badge: #e3e8f2;
 
-  --shadow-card: 0 1px 2px rgba(26, 29, 33, 0.03), 0 4px 16px rgba(26, 29, 33, 0.04);
-  --shadow-card-hover: 0 2px 6px rgba(26, 29, 33, 0.05), 0 10px 28px rgba(26, 29, 33, 0.07);
+  --shadow-card: 0 1px 2px rgba(18, 21, 26, 0.04), 0 6px 20px rgba(18, 21, 26, 0.06);
+  --shadow-card-hover: 0 2px 8px rgba(18, 21, 26, 0.06), 0 12px 32px rgba(18, 21, 26, 0.1);
 }
 
 *,

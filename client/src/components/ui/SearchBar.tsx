@@ -1,64 +1,108 @@
 import { Search, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import {
+  forwardRef,
+  useEffect,
+  useId,
+  useState,
+  type ChangeEvent,
+  type InputHTMLAttributes,
+} from 'react'
 
-interface SearchBarProps {
+export interface SearchBarProps
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'defaultValue' | 'size'> {
   value?: string
-  onChange?: (value: string) => void
-  placeholder?: string
-  className?: string
+  defaultValue?: string
+  onValueChange?: (value: string) => void
+  onClear?: () => void
+  clearable?: boolean
+  wrapperClassName?: string
 }
 
-export function SearchBar({
-  value: controlledValue,
-  onChange,
-  placeholder = 'Поиск по модулям...',
-  className = '',
-}: SearchBarProps) {
-  const [internalValue, setInternalValue] = useState('')
-  const value = controlledValue ?? internalValue
+const inputClass = [
+  'h-11 w-full rounded-2xl border border-border bg-white pl-11 pr-10 text-[14px] text-text-primary shadow-[0_1px_2px_rgba(26,29,33,0.03)]',
+  'placeholder:text-text-tertiary',
+  'transition-[border-color,background-color] duration-200',
+  'hover:border-text-tertiary/40 hover:bg-surface-subtle/30',
+  'focus:border-text-tertiary focus:bg-white focus:outline-none',
+  'disabled:cursor-not-allowed disabled:opacity-60',
+].join(' ')
 
-  const handleChange = (next: string) => {
-    setInternalValue(next)
-    onChange?.(next)
-  }
+export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(function SearchBar(
+  {
+    value: controlledValue,
+    defaultValue = '',
+    onValueChange,
+    onChange,
+    onClear,
+    placeholder = 'Поиск…',
+    clearable = true,
+    className = '',
+    wrapperClassName = '',
+    id: externalId,
+    type = 'search',
+    disabled,
+    ...inputProps
+  },
+  ref,
+) {
+  const fallbackId = useId()
+  const id = externalId ?? fallbackId
+  const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue)
+  const isControlled = controlledValue !== undefined
+  const value = isControlled ? controlledValue : uncontrolledValue
 
   useEffect(() => {
-    if (controlledValue !== undefined) {
-      setInternalValue(controlledValue)
-    }
-  }, [controlledValue])
+    if (!isControlled) setUncontrolledValue(defaultValue)
+  }, [defaultValue, isControlled])
+
+  const setValue = (next: string) => {
+    if (!isControlled) setUncontrolledValue(next)
+    onValueChange?.(next)
+  }
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setValue(event.target.value)
+    onChange?.(event)
+  }
+
+  const handleClear = () => {
+    setValue('')
+    onClear?.()
+  }
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={['relative', wrapperClassName].filter(Boolean).join(' ')}>
       <Search
         size={16}
-        className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none"
-        strokeWidth={1.5}
+        strokeWidth={1.75}
+        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary"
+        aria-hidden
       />
       <input
-        type="search"
+        ref={ref}
+        id={id}
+        type={type}
         value={value}
-        onChange={(e) => handleChange(e.target.value)}
+        onChange={handleChange}
         placeholder={placeholder}
-        className={[
-          'w-full h-11 pl-10 pr-9',
-          'bg-surface border border-border rounded-[10px]',
-          'text-text-primary text-[13px] placeholder:text-text-tertiary',
-          'transition-all duration-200',
-          'hover:border-text-tertiary/50',
-          'focus:outline-none focus:border-accent/60 focus:ring-[3px] focus:ring-accent/8',
-        ].join(' ')}
+        disabled={disabled}
+        className={[inputClass, className].filter(Boolean).join(' ')}
+        {...inputProps}
       />
-      {value && (
+      {clearable && value && !disabled && (
         <button
           type="button"
-          onClick={() => handleChange('')}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-text-tertiary hover:text-text-secondary transition-colors duration-200"
+          onPointerDown={(e) => e.preventDefault()}
+          onClick={handleClear}
+          className={[
+            'absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-text-tertiary transition-colors',
+            'hover:bg-surface-muted hover:text-text-secondary',
+          ].join(' ')}
           aria-label="Очистить поиск"
         >
-          <X size={14} strokeWidth={1.5} />
+          <X size={14} strokeWidth={1.75} />
         </button>
       )}
     </div>
   )
-}
+})

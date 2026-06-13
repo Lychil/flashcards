@@ -1,6 +1,6 @@
 import { FileText, Folder, Map } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { homeCardClass, homeInteractiveClass } from './homeStyles'
+import { homeCardClass, moduleInteractiveClass } from './homeStyles'
 
 const items = [
   {
@@ -37,7 +37,7 @@ export function QuickCreateSection() {
             to={item.to}
             className={[
               `flex cursor-pointer flex-col gap-3 px-4 py-4 ${homeCardClass}`,
-              homeInteractiveClass,
+              moduleInteractiveClass,
               'hover:bg-surface-subtle/40',
             ].join(' ')}
           >

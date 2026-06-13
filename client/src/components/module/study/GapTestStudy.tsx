@@ -7,7 +7,7 @@ import { StudyResult, StudyShell } from './StudyShell'
 
 interface GapTestStudyProps {
   cards: Flashcard[]
-  onBack: () => void
+  accentColor?: string
 }
 
 const DIFFICULTY_OPTIONS = [
@@ -16,7 +16,7 @@ const DIFFICULTY_OPTIONS = [
   { value: 75, label: 'Сложный' },
 ]
 
-export function GapTestStudy({ cards, onBack }: GapTestStudyProps) {
+export function GapTestStudy({ cards, accentColor }: GapTestStudyProps) {
   const [difficulty, setDifficulty] = useState(50)
   const [started, setStarted] = useState(false)
   const [session, setSession] = useState(0)
@@ -54,7 +54,7 @@ export function GapTestStudy({ cards, onBack }: GapTestStudyProps) {
 
   if (!started) {
     return (
-      <StudyShell title="Пропуски в словах" onBack={onBack}>
+      <StudyShell title="Пропуски в словах" accentColor={accentColor}>
         <div className={`p-6 ${homeCardClass}`}>
           <p className="mb-4 text-[14px] text-text-secondary">
             Восстановите термин по определению. Настройте, сколько букв будет скрыто.
@@ -91,7 +91,7 @@ export function GapTestStudy({ cards, onBack }: GapTestStudyProps) {
 
   if (finished) {
     return (
-      <StudyShell title="Пропуски в словах" onBack={onBack}>
+      <StudyShell title="Пропуски в словах" accentColor={accentColor}>
         <StudyResult
           title="Упражнение завершено"
           scoreLabel={`${correctCount} / ${questions.length}`}
@@ -105,7 +105,6 @@ export function GapTestStudy({ cards, onBack }: GapTestStudyProps) {
             setCorrectCount(0)
             setFinished(false)
           }}
-          onBack={onBack}
         />
       </StudyShell>
     )
@@ -118,15 +117,15 @@ export function GapTestStudy({ cards, onBack }: GapTestStudyProps) {
       title="Пропуски в словах"
       subtitle={`${index + 1} из ${questions.length}`}
       progress={progress}
-      onBack={onBack}
+      accentColor={accentColor}
     >
       <div className={`p-6 ${homeCardClass}`}>
         <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
-          Определение
+          Обратная сторона
         </p>
         <p className="mb-6 text-[18px] leading-relaxed text-text-primary">{current.definition}</p>
 
-        <p className="mb-2 text-[13px] font-medium text-text-secondary">Термин с пропусками</p>
+        <p className="mb-2 text-[13px] font-medium text-text-secondary">Слово с пропусками</p>
         <p className="mb-6 font-mono text-[24px] font-semibold tracking-wide text-text-primary">
           {gap.display}
         </p>

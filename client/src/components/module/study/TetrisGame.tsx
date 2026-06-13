@@ -6,7 +6,7 @@ import { StudyShell } from './StudyShell'
 
 interface TetrisGameProps {
   cards: Flashcard[]
-  onBack: () => void
+  accentColor?: string
 }
 
 const COLS = 8
@@ -89,7 +89,7 @@ interface Challenge {
   options: string[]
 }
 
-export function TetrisGame({ cards, onBack }: TetrisGameProps) {
+export function TetrisGame({ cards, accentColor }: TetrisGameProps) {
   const [board, setBoard] = useState<Cell[][]>(() => emptyBoard())
   const [piece, setPiece] = useState<Piece>(() => createPiece(0))
   const [pos, setPos] = useState({ row: 0, col: 3 })
@@ -270,7 +270,7 @@ export function TetrisGame({ cards, onBack }: TetrisGameProps) {
 
   if (!started) {
     return (
-      <StudyShell title="Условный тетрис" onBack={onBack}>
+      <StudyShell title="Условный тетрис" accentColor={accentColor}>
         <div className={`p-6 ${homeCardClass}`}>
           <p className="mb-4 text-[14px] leading-relaxed text-text-secondary">
             Каждая третья фигура — вопрос по модулю. Ответ верный — управляете сами. Ошибка — фигура
@@ -295,7 +295,7 @@ export function TetrisGame({ cards, onBack }: TetrisGameProps) {
     <StudyShell
       title="Условный тетрис"
       subtitle={`Счёт ${score} · Линии ${lines}`}
-      onBack={onBack}
+      accentColor={accentColor}
     >
       <div className="flex flex-col items-center gap-4">
         {!manualControl && !challenge && (

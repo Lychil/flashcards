@@ -6,7 +6,7 @@ import { StudyResult, StudyShell } from './StudyShell'
 
 interface MatchingStudyProps {
   cards: Flashcard[]
-  onBack: () => void
+  accentColor?: string
 }
 
 type MatchSide = 'term' | 'definition'
@@ -18,7 +18,7 @@ interface MatchItem {
   text: string
 }
 
-export function MatchingStudy({ cards, onBack }: MatchingStudyProps) {
+export function MatchingStudy({ cards, accentColor }: MatchingStudyProps) {
   const pairCount = Math.min(cards.length, 6)
   const [session, setSession] = useState(0)
   const round = useMemo(() => pickRandom(cards, pairCount), [cards, pairCount, session])
@@ -96,7 +96,7 @@ export function MatchingStudy({ cards, onBack }: MatchingStudyProps) {
 
   if (finished) {
     return (
-      <StudyShell title="Сопоставление" onBack={onBack}>
+      <StudyShell title="Сопоставление" accentColor={accentColor}>
         <StudyResult
           title="Все пары найдены!"
           scoreLabel={`${round.length} пар`}
@@ -109,7 +109,6 @@ export function MatchingStudy({ cards, onBack }: MatchingStudyProps) {
             setAttempts(0)
             setFinished(false)
           }}
-          onBack={onBack}
         />
       </StudyShell>
     )
@@ -120,12 +119,12 @@ export function MatchingStudy({ cards, onBack }: MatchingStudyProps) {
       title="Сопоставление"
       subtitle={`${matchedIds.size} / ${round.length} пар`}
       progress={progress}
-      onBack={onBack}
+      accentColor={accentColor}
     >
       <div className={`grid gap-4 p-4 sm:grid-cols-2 sm:p-6 ${homeCardClass}`}>
         <div className="space-y-2">
           <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
-            Термины
+            Лицевая сторона
           </p>
           {items.terms.map((item) => (
             <button
@@ -141,7 +140,7 @@ export function MatchingStudy({ cards, onBack }: MatchingStudyProps) {
         </div>
         <div className="space-y-2">
           <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
-            Определения
+            Обратная сторона
           </p>
           {items.defs.map((item) => (
             <button

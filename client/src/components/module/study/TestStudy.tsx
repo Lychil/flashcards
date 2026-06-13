@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
 import { pickRandom, shuffle } from '../../../lib/shuffle'
+import type { SrsRating } from '../../../types/srs'
 import type { Flashcard } from '../../../types/flashcard'
+import { SrsRatingButtons } from '../SrsRatingButtons'
 import { homeCardClass } from '../../home/homeStyles'
 import { StudyResult, StudyShell } from './StudyShell'
 
 interface TestStudyProps {
   cards: Flashcard[]
-  onBack: () => void
+  accentColor?: string
+  onRate?: (cardId: string, rating: SrsRating) => void
 }
 
 interface TestQuestion {
@@ -27,13 +30,14 @@ function buildQuestions(cards: Flashcard[]): TestQuestion[] {
   })
 }
 
-export function TestStudy({ cards, onBack }: TestStudyProps) {
+export function TestStudy({ cards, accentColor, onRate }: TestStudyProps) {
   const [session, setSession] = useState(0)
   const questions = useMemo(() => buildQuestions(cards), [cards, session])
   const [index, setIndex] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
   const [correctCount, setCorrectCount] = useState(0)
   const [finished, setFinished] = useState(false)
+  const [awaitingRating, setAwaitingRating] = useState(false)
 
   const current = questions[index]
   const progress = ((index + (selected ? 1 : 0)) / questions.length) * 100
@@ -43,6 +47,13 @@ export function TestStudy({ cards, onBack }: TestStudyProps) {
     setSelected(option)
     const isCorrect = option === current.card.term
     if (isCorrect) setCorrectCount((c) => c + 1)
+    setAwaitingRating(true)
+  }
+
+  const handleRate = (rating: SrsRating) => {
+    onRate?.(current.card.id, rating)
+    setAwaitingRating(false)
+    handleNext()
   }
 
   const handleNext = () => {
@@ -60,17 +71,17 @@ export function TestStudy({ cards, onBack }: TestStudyProps) {
     setSelected(null)
     setCorrectCount(0)
     setFinished(false)
+    setAwaitingRating(false)
   }
 
   if (finished) {
     return (
-      <StudyShell title="Тестирование" onBack={onBack}>
+      <StudyShell title="Тестирование" accentColor={accentColor}>
         <StudyResult
           title="Тест завершён"
           scoreLabel={`${correctCount} / ${questions.length}`}
           detail={`${Math.round((correctCount / questions.length) * 100)}% правильных ответов`}
           onRestart={restart}
-          onBack={onBack}
         />
       </StudyShell>
     )
@@ -83,11 +94,11 @@ export function TestStudy({ cards, onBack }: TestStudyProps) {
       title="Тестирование"
       subtitle={`Вопрос ${index + 1} из ${questions.length}`}
       progress={progress}
-      onBack={onBack}
+      accentColor={accentColor}
     >
       <div className={`p-6 ${homeCardClass}`}>
         <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
-          Определение
+          Обратная сторона
         </p>
         <p className="mb-6 text-[18px] leading-relaxed text-text-primary">{current.card.definition}</p>
 
@@ -119,18 +130,15 @@ export function TestStudy({ cards, onBack }: TestStudyProps) {
           })}
         </div>
 
-        {selected && (
-          <div className="mt-6 flex items-center justify-between gap-3">
+        {selected && awaitingRating && (
+          <div className="mt-6 space-y-3">
             <p className={`text-[13px] font-medium ${isCorrect ? 'text-[#2d8a66]' : 'text-[#b04472]'}`}>
               {isCorrect ? 'Верно!' : `Правильный ответ: ${current.card.term}`}
             </p>
-            <button
-              type="button"
-              onClick={handleNext}
-              className="cursor-pointer rounded-xl bg-[#6366f1] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
-            >
-              {index >= questions.length - 1 ? 'Результат' : 'Далее'}
-            </button>
+            <p className="text-[12px] font-medium text-text-secondary">
+              Оцените, насколько легко вспомнили:
+            </p>
+            <SrsRatingButtons onRate={handleRate} />
           </div>
         )}
       </div>

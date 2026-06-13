@@ -28,6 +28,7 @@ export interface StudyModeOption {
   icon: LucideIcon
   minCards: number
   accent: string
+  premium?: boolean
 }
 
 export const STUDY_MODE_GROUPS: { id: StudyModeGroup; label: string }[] = [
@@ -80,6 +81,7 @@ export const STUDY_MODES: StudyModeOption[] = [
     icon: Sparkles,
     minCards: 1,
     accent: '#F5B84C',
+    premium: true,
   },
   {
     id: 'mnemo',
@@ -89,6 +91,7 @@ export const STUDY_MODES: StudyModeOption[] = [
     icon: Brain,
     minCards: 2,
     accent: '#E879A9',
+    premium: true,
   },
   {
     id: 'tetris',
@@ -98,6 +101,7 @@ export const STUDY_MODES: StudyModeOption[] = [
     icon: Gamepad2,
     minCards: 3,
     accent: '#E0956B',
+    premium: true,
   },
 ]
 

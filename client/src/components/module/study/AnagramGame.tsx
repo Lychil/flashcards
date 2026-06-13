@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { shuffle } from '../../../lib/shuffle'
+import type { SrsRating } from '../../../types/srs'
 import type { Flashcard } from '../../../types/flashcard'
+import { SrsRatingButtons } from '../SrsRatingButtons'
 import { homeCardClass } from '../../home/homeStyles'
 import { StudyResult, StudyShell } from './StudyShell'
 
 interface AnagramGameProps {
   cards: Flashcard[]
-  onBack: () => void
+  accentColor?: string
+  onRate?: (cardId: string, rating: SrsRating) => void
 }
 
 function scrambleLetters(word: string): string[] {
@@ -20,7 +23,7 @@ function scrambleLetters(word: string): string[] {
   return scrambled
 }
 
-export function AnagramGame({ cards, onBack }: AnagramGameProps) {
+export function AnagramGame({ cards, accentColor, onRate }: AnagramGameProps) {
   const [questions] = useState(() => shuffle(cards))
   const [index, setIndex] = useState(0)
   const [picked, setPicked] = useState<number[]>([])
@@ -77,7 +80,7 @@ export function AnagramGame({ cards, onBack }: AnagramGameProps) {
 
   if (finished) {
     return (
-      <StudyShell title="Анаграмма" onBack={onBack}>
+      <StudyShell title="Анаграмма" accentColor={accentColor}>
         <StudyResult
           title="Игра завершена"
           scoreLabel={`${correctCount} / ${questions.length}`}
@@ -88,7 +91,6 @@ export function AnagramGame({ cards, onBack }: AnagramGameProps) {
             setCorrectCount(0)
             setFinished(false)
           }}
-          onBack={onBack}
         />
       </StudyShell>
     )
@@ -101,11 +103,11 @@ export function AnagramGame({ cards, onBack }: AnagramGameProps) {
       title="Анаграмма"
       subtitle={`${index + 1} из ${questions.length}`}
       progress={progress}
-      onBack={onBack}
+      accentColor={accentColor}
     >
       <div className={`p-6 ${homeCardClass}`}>
         <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
-          Определение
+          Обратная сторона
         </p>
         <p className="mb-6 text-[18px] leading-relaxed text-text-primary">{current.definition}</p>
 
@@ -158,19 +160,18 @@ export function AnagramGame({ cards, onBack }: AnagramGameProps) {
             </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-3">
+          <div className="space-y-3">
             <p
               className={`text-[13px] font-medium ${feedback === 'correct' ? 'text-[#2d8a66]' : 'text-[#b04472]'}`}
             >
               {feedback === 'correct' ? 'Верно!' : `Правильно: ${current.term}`}
             </p>
-            <button
-              type="button"
-              onClick={next}
-              className="cursor-pointer rounded-xl bg-[#6366f1] px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
-            >
-              {index >= questions.length - 1 ? 'Результат' : 'Далее'}
-            </button>
+            <SrsRatingButtons
+              onRate={(rating) => {
+                onRate?.(current.id, rating)
+                next()
+              }}
+            />
           </div>
         )}
       </div>
