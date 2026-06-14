@@ -16,13 +16,14 @@ export type StudyModeId =
   | 'matching'
   | 'anagram'
   | 'mnemo'
-  | 'tetris'
+  | 'blocks'
 
 export type StudyModeGroup = 'standard' | 'minigame'
 
 export interface StudyModeOption {
   id: StudyModeId
   title: string
+  shortTitle?: string
   description: string
   group: StudyModeGroup
   icon: LucideIcon
@@ -40,6 +41,7 @@ export const STUDY_MODES: StudyModeOption[] = [
   {
     id: 'test',
     title: 'Тестирование',
+    shortTitle: 'Тест',
     description: 'Вопросы с вариантами ответа по карточкам модуля',
     group: 'standard',
     icon: FileQuestion,
@@ -58,6 +60,7 @@ export const STUDY_MODES: StudyModeOption[] = [
   {
     id: 'matching',
     title: 'Сопоставление',
+    shortTitle: 'Пары',
     description: 'Соедините термины с определениями в двух колонках',
     group: 'standard',
     icon: Columns2,
@@ -66,7 +69,7 @@ export const STUDY_MODES: StudyModeOption[] = [
   },
   {
     id: 'gaps',
-    title: 'Пропуски в словах',
+    title: 'Пропуски',
     description: 'Восстановите термин по определению — настройте сложность',
     group: 'standard',
     icon: Puzzle,
@@ -94,9 +97,10 @@ export const STUDY_MODES: StudyModeOption[] = [
     premium: true,
   },
   {
-    id: 'tetris',
-    title: 'Условный тетрис',
-    description: 'Каждая третья фигура — слово: ответ верный — управляете сами',
+    id: 'blocks',
+    title: 'Падающие блоки',
+    shortTitle: 'Блоки',
+    description: 'Складывайте фигуры в линии. Каждая третья — вопрос по модулю',
     group: 'minigame',
     icon: Gamepad2,
     minCards: 3,

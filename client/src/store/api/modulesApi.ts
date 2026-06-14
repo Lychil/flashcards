@@ -12,6 +12,7 @@ export interface ModuleDetail {
 const mockUser: User = {
   id: '1',
   name: 'Александр',
+  isPremium: true,
 }
 
 const mockAuthors = {

@@ -1,15 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
+import { isSpellingMatch } from '../../../lib/spellingDiff'
 import { shuffle } from '../../../lib/shuffle'
+import { pickSessionCards, TEST_SESSION_SIZE } from '../../../lib/testSession'
 import type { SrsRating } from '../../../types/srs'
 import type { Flashcard } from '../../../types/flashcard'
-import { SrsRatingButtons } from '../SrsRatingButtons'
 import { homeCardClass } from '../../home/homeStyles'
-import { StudyResult, StudyShell } from './StudyShell'
+import { moduleGhostButtonClass } from '../moduleStyles'
+import { StudyShell } from './StudyShell'
+import { StudyTestResults, type TestAnswerReview } from './StudyTestResults'
 
 interface AnagramGameProps {
   cards: Flashcard[]
   accentColor?: string
   onRate?: (cardId: string, rating: SrsRating) => void
+}
+
+interface AnagramQuestion {
+  card: Flashcard
+  letterPool: string[]
+}
+
+interface QuestionState {
+  picked: number[]
+  available: number[]
 }
 
 function scrambleLetters(word: string): string[] {
@@ -23,157 +36,217 @@ function scrambleLetters(word: string): string[] {
   return scrambled
 }
 
+function buildQuestions(cards: Flashcard[]): AnagramQuestion[] {
+  return pickSessionCards(cards, TEST_SESSION_SIZE).map((card) => ({
+    card,
+    letterPool: scrambleLetters(card.term),
+  }))
+}
+
+function createInitialState(questions: AnagramQuestion[]): Record<string, QuestionState> {
+  return Object.fromEntries(
+    questions.map((question) => [
+      question.card.id,
+      {
+        picked: [],
+        available: question.letterPool.map((_, index) => index),
+      },
+    ]),
+  )
+}
+
+function buildAnswerText(question: AnagramQuestion, state: QuestionState): string {
+  return state.picked.map((index) => question.letterPool[index]).join('')
+}
+
 export function AnagramGame({ cards, accentColor, onRate }: AnagramGameProps) {
-  const [questions] = useState(() => shuffle(cards))
-  const [index, setIndex] = useState(0)
-  const [picked, setPicked] = useState<number[]>([])
-  const [available, setAvailable] = useState<number[]>([])
-  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
-  const [correctCount, setCorrectCount] = useState(0)
+  const [session, setSession] = useState(0)
+  const questions = useMemo(() => buildQuestions(cards), [cards, session])
+  const [questionStates, setQuestionStates] = useState<Record<string, QuestionState>>(() =>
+    createInitialState(questions),
+  )
+  const [results, setResults] = useState<TestAnswerReview[]>([])
   const [finished, setFinished] = useState(false)
 
-  const current = questions[index]
-
-  const letterPool = useMemo(() => {
-    if (!current) return []
-    return scrambleLetters(current.term)
-  }, [current])
-
   useEffect(() => {
-    setAvailable(letterPool.map((_, i) => i))
-    setPicked([])
-    setFeedback(null)
-  }, [letterPool, index])
+    setQuestionStates(createInitialState(questions))
+    setResults([])
+    setFinished(false)
+  }, [questions])
 
-  const progress = ((index + (feedback ? 1 : 0)) / questions.length) * 100
-  const answer = picked.map((i) => letterPool[i]).join('')
+  const answeredCount = questions.filter((question) => {
+    const state = questionStates[question.card.id]
+    return state && state.picked.length === question.letterPool.length
+  }).length
 
-  const pickLetter = (letterIndex: number) => {
-    if (feedback) return
-    setPicked((p) => [...p, letterIndex])
-    setAvailable((a) => a.filter((i) => i !== letterIndex))
+  const allAnswered = answeredCount === questions.length && questions.length > 0
+  const progress = questions.length === 0 ? 0 : (answeredCount / questions.length) * 100
+
+  const updateState = (cardId: string, updater: (state: QuestionState) => QuestionState) => {
+    setQuestionStates((prev) => {
+      const current = prev[cardId]
+      if (!current) return prev
+      return { ...prev, [cardId]: updater(current) }
+    })
   }
 
-  const undoLetter = () => {
-    if (feedback || picked.length === 0) return
-    const last = picked[picked.length - 1]
-    setPicked((p) => p.slice(0, -1))
-    setAvailable((a) => [...a, last])
+  const pickLetter = (question: AnagramQuestion, letterIndex: number) => {
+    updateState(question.card.id, (state) => ({
+      picked: [...state.picked, letterIndex],
+      available: state.available.filter((index) => index !== letterIndex),
+    }))
   }
 
-  const check = () => {
-    if (!current || feedback) return
-    const normalizedAnswer = answer.replace(/\s/g, '').toLowerCase()
-    const normalizedTerm = current.term.replace(/\s/g, '').toLowerCase()
-    const ok = normalizedAnswer === normalizedTerm
-    setFeedback(ok ? 'correct' : 'wrong')
-    if (ok) setCorrectCount((c) => c + 1)
+  const undoLetter = (question: AnagramQuestion) => {
+    updateState(question.card.id, (state) => {
+      if (state.picked.length === 0) return state
+      const last = state.picked[state.picked.length - 1]
+      return {
+        picked: state.picked.slice(0, -1),
+        available: [...state.available, last],
+      }
+    })
   }
 
-  const next = () => {
-    if (index >= questions.length - 1) {
-      setFinished(true)
-      return
+  const applySrs = (review: TestAnswerReview[]) => {
+    if (!onRate) return
+    for (const answer of review) {
+      if (answer.cardId) {
+        onRate(answer.cardId, answer.isCorrect ? 'good' : 'hard')
+      }
     }
-    setIndex((i) => i + 1)
+  }
+
+  const handleSubmit = () => {
+    if (!allAnswered) return
+
+    const review: TestAnswerReview[] = questions.map((question) => {
+      const state = questionStates[question.card.id]
+      const userAnswer = buildAnswerText(question, state)
+
+      return {
+        cardId: question.card.id,
+        prompt: question.card.definition,
+        userAnswer,
+        correctAnswer: question.card.term,
+        isCorrect: isSpellingMatch(userAnswer, question.card.term),
+        reviewVariant: 'spelling',
+      }
+    })
+
+    applySrs(review)
+    setResults(review)
+    setFinished(true)
+  }
+
+  const restart = () => {
+    setSession((value) => value + 1)
   }
 
   if (finished) {
     return (
       <StudyShell title="Анаграмма" accentColor={accentColor}>
-        <StudyResult
-          title="Игра завершена"
-          scoreLabel={`${correctCount} / ${questions.length}`}
-          onRestart={() => {
-            setIndex(0)
-            setPicked([])
-            setFeedback(null)
-            setCorrectCount(0)
-            setFinished(false)
-          }}
+        <StudyTestResults
+          title="Анаграмма завершена"
+          answers={results}
+          accentColor={accentColor}
+          onRestart={restart}
         />
       </StudyShell>
     )
   }
 
-  if (!current) return null
+  if (questions.length === 0) return null
 
   return (
     <StudyShell
       title="Анаграмма"
-      subtitle={`${index + 1} из ${questions.length}`}
+      subtitle={`${questions.length} заданий · соберите все слова, чтобы увидеть результат`}
       progress={progress}
       accentColor={accentColor}
     >
-      <div className={`p-6 ${homeCardClass}`}>
-        <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
-          Обратная сторона
-        </p>
-        <p className="mb-6 text-[18px] leading-relaxed text-text-primary">{current.definition}</p>
+      <div className="space-y-4">
+        {questions.map((question, index) => {
+          const state = questionStates[question.card.id]
+          if (!state) return null
 
-        <div className="mb-4 flex min-h-[52px] flex-wrap items-center gap-2 rounded-xl border border-dashed border-border bg-surface-subtle/50 px-3 py-2">
-          {picked.length === 0 ? (
-            <span className="text-[13px] text-text-tertiary">Соберите слово из букв</span>
-          ) : (
-            picked.map((li, i) => (
-              <span
-                key={`${li}-${i}`}
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-[16px] font-semibold shadow-sm"
-              >
-                {letterPool[li]}
-              </span>
-            ))
-          )}
+          const answer = buildAnswerText(question, state)
+          const isComplete = state.picked.length === question.letterPool.length
+
+          return (
+            <div key={question.card.id} className={`p-5 sm:p-6 ${homeCardClass}`}>
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-tertiary">
+                Задание {index + 1}
+              </p>
+              <p className="mb-4 text-[16px] leading-relaxed text-text-primary sm:text-[17px]">
+                {question.card.definition}
+              </p>
+
+              <div className="mb-4 flex min-h-[52px] flex-wrap items-center gap-2 rounded-xl border border-dashed border-border bg-surface-subtle/50 px-3 py-2">
+                {state.picked.length === 0 ? (
+                  <span className="text-[13px] text-text-tertiary">Соберите слово из букв</span>
+                ) : (
+                  state.picked.map((letterIndex, pickedIndex) => (
+                    <span
+                      key={`${letterIndex}-${pickedIndex}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-[16px] font-semibold uppercase shadow-sm"
+                    >
+                      {question.letterPool[letterIndex]}
+                    </span>
+                  ))
+                )}
+              </div>
+
+              <div className="mb-4 flex flex-wrap gap-2">
+                {state.available.map((letterIndex) => (
+                  <button
+                    key={letterIndex}
+                    type="button"
+                    onClick={() => pickLetter(question, letterIndex)}
+                    className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-border bg-white text-[16px] font-semibold uppercase transition-colors hover:border-[#d4d9e0] hover:bg-surface-subtle/30"
+                  >
+                    {question.letterPool[letterIndex]}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => undoLetter(question)}
+                  disabled={state.picked.length === 0}
+                  className={`${moduleGhostButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
+                >
+                  Отменить
+                </button>
+                <span className="text-[12px] tabular-nums text-text-tertiary">
+                  {answer.length}/{question.letterPool.length}
+                </span>
+              </div>
+
+              {!isComplete && (
+                <p className="mt-3 text-[12px] text-text-tertiary">Используйте все буквы</p>
+              )}
+            </div>
+          )
+        })}
+
+        <div className={`sticky bottom-4 flex items-center justify-between gap-4 p-4 ${homeCardClass}`}>
+          <p className="text-[13px] text-text-secondary">
+            Собрано{' '}
+            <span className="font-semibold tabular-nums text-text-primary">
+              {answeredCount} / {questions.length}
+            </span>
+          </p>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!allAnswered}
+            className={`${moduleGhostButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}
+          >
+            Показать результат
+          </button>
         </div>
-
-        <div className="mb-6 flex flex-wrap gap-2">
-          {available.map((li) => (
-            <button
-              key={li}
-              type="button"
-              onClick={() => pickLetter(li)}
-              disabled={Boolean(feedback)}
-              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-border bg-white text-[16px] font-semibold transition-colors hover:border-[#6366f1] hover:bg-[#6366f1]/5 disabled:opacity-50"
-            >
-              {letterPool[li]}
-            </button>
-          ))}
-        </div>
-
-        {!feedback ? (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={undoLetter}
-              disabled={picked.length === 0}
-              className="cursor-pointer rounded-xl border border-border px-4 py-2.5 text-[13px] font-medium text-text-secondary hover:border-[#d4d9e0] disabled:opacity-40"
-            >
-              Отменить
-            </button>
-            <button
-              type="button"
-              onClick={check}
-              disabled={picked.length !== letterPool.length}
-              className="cursor-pointer rounded-xl bg-[#6366f1] px-4 py-2.5 text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-40"
-            >
-              Проверить
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p
-              className={`text-[13px] font-medium ${feedback === 'correct' ? 'text-[#2d8a66]' : 'text-[#b04472]'}`}
-            >
-              {feedback === 'correct' ? 'Верно!' : `Правильно: ${current.term}`}
-            </p>
-            <SrsRatingButtons
-              onRate={(rating) => {
-                onRate?.(current.id, rating)
-                next()
-              }}
-            />
-          </div>
-        )}
       </div>
     </StudyShell>
   )

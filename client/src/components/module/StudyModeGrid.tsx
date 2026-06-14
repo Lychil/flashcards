@@ -240,7 +240,7 @@ function ModeTile({
             disabled ? 'text-text-secondary' : 'text-text-primary',
           ].join(' ')}
         >
-          {mode.title}
+          {mode.shortTitle ?? mode.title}
         </span>
       </button>
     </div>

@@ -86,3 +86,18 @@ body {
 .flashcard-back {
   transform: rotateY(180deg);
 }
+
+@keyframes blocks-score-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-28px) scale(1);
+  }
+}

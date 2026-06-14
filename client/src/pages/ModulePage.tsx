@@ -27,7 +27,7 @@ import { GapTestStudy } from '../components/module/study/GapTestStudy'
 import { MatchingStudy } from '../components/module/study/MatchingStudy'
 import { MnemoGame } from '../components/module/study/MnemoGame'
 import { TestStudy } from '../components/module/study/TestStudy'
-import { TetrisGame } from '../components/module/study/TetrisGame'
+import { FallingBlocksGame } from '../components/module/study/FallingBlocksGame'
 import { Toast } from '../components/ui/Toast'
 import { useGetCurrentUserQuery, useGetModuleQuery } from '../store/api/modulesApi'
 import type { CardFilter, Flashcard } from '../types/flashcard'
@@ -215,8 +215,8 @@ export function ModulePage() {
         )
       case 'mnemo':
         return <MnemoGame cards={activeStudyCards} accentColor={moduleAccent} />
-      case 'tetris':
-        return <TetrisGame cards={activeStudyCards} accentColor={moduleAccent} />
+      case 'blocks':
+        return <FallingBlocksGame cards={activeStudyCards} accentColor={moduleAccent} />
       default:
         return null
     }

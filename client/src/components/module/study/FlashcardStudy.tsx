@@ -1,9 +1,9 @@
 import { Shuffle } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { shuffle } from '../../../lib/shuffle'
 import type { SrsRating } from '../../../types/srs'
 import type { Flashcard } from '../../../types/flashcard'
-import { SrsRatingButtons } from '../SrsRatingButtons'
+import { CardSrsChoiceButtons } from '../CardSrsChoiceButtons'
 import { StudyShell } from './StudyShell'
 
 interface FlashcardStudyProps {
@@ -18,16 +18,18 @@ export function FlashcardStudy({ cards, accentColor, onRate }: FlashcardStudyPro
   const [flipped, setFlipped] = useState(false)
   const [ratedCount, setRatedCount] = useState(0)
 
+  const deckKey = useMemo(() => cards.map((card) => card.id).join(','), [cards])
+
   useEffect(() => {
     setDeck(shuffle(cards))
     setIndex(0)
     setFlipped(false)
     setRatedCount(0)
-  }, [cards])
+  }, [deckKey]) // cards intentionally omitted — SRS updates must not reset the session
 
   const current = deck[index]
   const total = deck.length
-  const progress = ((index + 1) / total) * 100
+  const progress = total === 0 ? 0 : (ratedCount / total) * 100
 
   const toggleFlip = useCallback(() => setFlipped((f) => !f), [])
 
@@ -66,7 +68,7 @@ export function FlashcardStudy({ cards, accentColor, onRate }: FlashcardStudyPro
   return (
     <StudyShell
       title="Карточки"
-      subtitle={`${index + 1} из ${total}`}
+      subtitle={finished ? `Оценено ${ratedCount} из ${total}` : `${index + 1} из ${total}`}
       progress={progress}
       accentColor={accentColor}
     >
@@ -99,9 +101,9 @@ export function FlashcardStudy({ cards, accentColor, onRate }: FlashcardStudyPro
         {!finished && (
           <div className="mb-6 w-full max-w-[640px]">
             <p className="mb-3 text-center text-[12px] font-medium text-text-secondary">
-              Насколько легко вспомнили?
+              Оцените карточку
             </p>
-            <SrsRatingButtons onRate={rate} />
+            <CardSrsChoiceButtons onRate={rate} />
           </div>
         )}
 
