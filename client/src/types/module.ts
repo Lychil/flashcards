@@ -18,6 +18,8 @@ export interface Module {
   color?: string
   folderId?: string
   author: ModuleAuthor
+  favoriteCount: number
+  rating: number
   lastReviewedAt: string
   updatedAt: string
 }
@@ -26,4 +28,5 @@ export interface User {
   id: string
   name: string
   avatarUrl?: string
+  isPremium?: boolean
 }

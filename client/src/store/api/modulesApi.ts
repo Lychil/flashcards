@@ -12,6 +12,7 @@ export interface ModuleDetail {
 const mockUser: User = {
   id: '1',
   name: 'Александр',
+  isPremium: true,
 }
 
 const mockAuthors = {
@@ -24,7 +25,7 @@ export const mockModules: Module[] = [
   {
     id: '1',
     title: 'Кости верхней конечности',
-    description: 'Названия и расположение костей плеча, предплечья и кисти',
+    description: 'Кости верхней конечности: плечо, предплечье и кисть для подготовки к практикумам.',
     previewWords: ['Плечевая', 'Локтевая', 'Лучевая', 'Запястные'],
     wordCount: 28,
     category: 'Анатомия',
@@ -32,6 +33,8 @@ export const mockModules: Module[] = [
     type: 'interactive',
     color: '#9B8AFB',
     author: mockAuthors.self,
+    favoriteCount: 842,
+    rating: 4.8,
     folderId: 'f1',
     lastReviewedAt: '2026-06-06T07:30:00Z',
     updatedAt: '2026-06-05T10:00:00Z',
@@ -47,6 +50,8 @@ export const mockModules: Module[] = [
     type: 'text',
     color: '#F5B84C',
     author: mockAuthors.maria,
+    favoriteCount: 1240,
+    rating: 4.6,
     folderId: 'f2',
     lastReviewedAt: '2026-06-05T18:00:00Z',
     updatedAt: '2026-06-04T14:30:00Z',
@@ -61,6 +66,8 @@ export const mockModules: Module[] = [
     progress: 90,
     type: 'interactive',
     author: mockAuthors.dmitry,
+    favoriteCount: 516,
+    rating: 4.9,
     folderId: 'f1',
     lastReviewedAt: '2026-06-06T06:00:00Z',
     updatedAt: '2026-06-03T09:15:00Z',
@@ -75,6 +82,8 @@ export const mockModules: Module[] = [
     progress: 28,
     type: 'text',
     author: mockAuthors.maria,
+    favoriteCount: 328,
+    rating: 4.3,
     folderId: 'f3',
     lastReviewedAt: '2026-06-02T11:20:00Z',
     updatedAt: '2026-06-02T16:45:00Z',
@@ -90,6 +99,8 @@ export const mockModules: Module[] = [
     type: 'text',
     color: '#6BC9A7',
     author: mockAuthors.self,
+    favoriteCount: 0,
+    rating: 0,
     lastReviewedAt: '2026-06-06T10:00:00Z',
     updatedAt: '2026-06-06T10:00:00Z',
   },

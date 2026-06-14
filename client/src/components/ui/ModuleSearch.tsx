@@ -1,7 +1,8 @@
-import { FileText, ImageIcon, Search, X } from 'lucide-react'
+import { FileText, ImageIcon } from 'lucide-react'
 import { memo, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { mockModules } from '../../store/api/modulesApi'
 import type { Module } from '../../types/module'
+import { SearchBar } from './SearchBar'
 
 function filterModules(query: string): Module[] {
   const q = query.toLowerCase().trim()
@@ -145,13 +146,8 @@ export function ModuleSearch() {
   }
 
   return (
-    <div className="relative mt-7 max-w-[480px]">
-      <Search
-        size={17}
-        strokeWidth={1.5}
-        className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none"
-      />
-      <input
+    <div className="relative mt-6 max-w-[480px]">
+      <SearchBar
         ref={inputRef}
         type="text"
         role="combobox"
@@ -163,36 +159,18 @@ export function ModuleSearch() {
         }
         value={query}
         placeholder="Найти модуль по названию или предмету..."
-        onChange={(e) => {
-          setQuery(e.target.value)
+        onValueChange={(next) => {
+          setQuery(next)
           setIsOpen(true)
         }}
         onFocus={() => setIsOpen(true)}
         onBlur={() => setTimeout(() => setIsOpen(false), 150)}
         onKeyDown={handleKeyDown}
-        className={[
-          'w-full h-11 pl-11 pr-10',
-          'bg-surface-subtle/60 border border-border-subtle rounded-xl',
-          'text-[14px] text-text-primary placeholder:text-text-tertiary',
-          'hover:border-border hover:bg-white',
-          'focus:outline-none focus:border-border focus:bg-white',
-        ].join(' ')}
+        onClear={() => {
+          setIsOpen(true)
+          inputRef.current?.focus()
+        }}
       />
-      {query && (
-        <button
-          type="button"
-          onPointerDown={(e) => e.preventDefault()}
-          onClick={() => {
-            setQuery('')
-            setIsOpen(true)
-            inputRef.current?.focus()
-          }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-text-tertiary hover:text-text-secondary"
-          aria-label="Очистить"
-        >
-          <X size={15} strokeWidth={1.5} />
-        </button>
-      )}
 
       {open && (
         <ul

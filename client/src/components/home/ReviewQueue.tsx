@@ -4,7 +4,7 @@ import { getCardColorTheme, resolveModuleBaseColor } from '../../lib/cardColor'
 import { formatLastReviewed } from '../../lib/formatRelativeTime'
 import { pluralizeCards } from '../../lib/pluralizeRu'
 import type { Module } from '../../types/module'
-import { homeCardClass, homeInteractiveClass } from './homeStyles'
+import { homeCardClass, moduleInteractiveClass } from './homeStyles'
 
 interface ReviewQueueProps {
   modules: Module[]
@@ -16,7 +16,7 @@ export function ReviewQueue({ modules }: ReviewQueueProps) {
   if (modules.length === 0) return null
 
   return (
-    <div className={`p-3 ${homeCardClass}`}>
+    <div className={`p-4 ${homeCardClass}`}>
       <ul className="flex flex-col gap-1.5">
         {modules.map((module) => {
           const isInteractive = module.type === 'interactive'
@@ -28,8 +28,8 @@ export function ReviewQueue({ modules }: ReviewQueueProps) {
                 type="button"
                 onClick={() => navigate(`/module/${module.id}`)}
                 className={[
-                  'flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-transparent bg-surface-subtle/80 px-3 py-3 text-left',
-                  homeInteractiveClass,
+                  'flex w-full cursor-pointer items-center gap-3 rounded-xl border border-transparent bg-surface-subtle/50 px-3 py-3 text-left',
+                  moduleInteractiveClass,
                   'hover:border-border hover:bg-white',
                 ].join(' ')}
               >
@@ -44,7 +44,7 @@ export function ReviewQueue({ modules }: ReviewQueueProps) {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-medium text-text-primary">
+                  <p className="truncate text-[13px] font-semibold text-text-primary">
                     {module.title}
                   </p>
                   <p className="text-[11px] text-text-tertiary">

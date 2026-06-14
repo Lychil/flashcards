@@ -6,7 +6,7 @@ import { StudyResult, StudyShell } from './StudyShell'
 
 interface MnemoGameProps {
   cards: Flashcard[]
-  onBack: () => void
+  accentColor?: string
 }
 
 type MnemoPhase = 'setup' | 'memorize' | 'distract' | 'recall' | 'result'
@@ -27,7 +27,7 @@ function buildSequence(type: SequenceType, length: number): string[] {
   return pickRandom([...COLORS], length)
 }
 
-export function MnemoGame({ cards, onBack }: MnemoGameProps) {
+export function MnemoGame({ cards, accentColor }: MnemoGameProps) {
   const [phase, setPhase] = useState<MnemoPhase>('setup')
   const [sequenceType, setSequenceType] = useState<SequenceType>('colors')
   const [difficulty, setDifficulty] = useState<(typeof DIFFICULTY)[number]['id']>('medium')
@@ -102,7 +102,7 @@ export function MnemoGame({ cards, onBack }: MnemoGameProps) {
 
   if (phase === 'setup') {
     return (
-      <StudyShell title="Мнемо" onBack={onBack}>
+      <StudyShell title="Мнемо" accentColor={accentColor}>
         <div className={`space-y-6 p-6 ${homeCardClass}`}>
           <div>
             <p className="mb-3 text-[13px] font-medium text-text-primary">Тип последовательности</p>
@@ -158,7 +158,7 @@ export function MnemoGame({ cards, onBack }: MnemoGameProps) {
 
   if (phase === 'memorize') {
     return (
-      <StudyShell title="Мнемо" subtitle="Запомните последовательность" onBack={onBack}>
+      <StudyShell title="Мнемо" subtitle="Запомните последовательность" accentColor={accentColor}>
         <div className={`p-8 text-center ${homeCardClass}`}>
           <p className="mb-6 text-[14px] text-text-secondary">
             Запоминайте — через {countdown} сек. начнётся отвлечение
@@ -191,7 +191,7 @@ export function MnemoGame({ cards, onBack }: MnemoGameProps) {
       <StudyShell
         title="Мнемо"
         subtitle={`Отвлечение ${distractorIndex + 1} / ${distractorQuestions.length}`}
-        onBack={onBack}
+        accentColor={accentColor}
       >
         <div className={`p-6 ${homeCardClass}`}>
           <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
@@ -224,7 +224,7 @@ export function MnemoGame({ cards, onBack }: MnemoGameProps) {
         : Array.from({ length: 9 }, (_, i) => String(i + 1))
 
     return (
-      <StudyShell title="Мнемо" subtitle="Воспроизведите последовательность" onBack={onBack}>
+      <StudyShell title="Мнемо" subtitle="Воспроизведите последовательность" accentColor={accentColor}>
         <div className={`p-6 ${homeCardClass}`}>
           <div className="mb-4 flex min-h-[56px] flex-wrap items-center gap-2 rounded-xl border border-dashed border-border bg-surface-subtle/50 px-3 py-2">
             {recallInput.length === 0 ? (
@@ -293,13 +293,12 @@ export function MnemoGame({ cards, onBack }: MnemoGameProps) {
   }
 
   return (
-    <StudyShell title="Мнемо" onBack={onBack}>
+    <StudyShell title="Мнемо" accentColor={accentColor}>
       <StudyResult
         title={isCorrect ? 'Отлично!' : 'Не совсем'}
         scoreLabel={isCorrect ? 'Последовательность верна' : 'Есть ошибки'}
         detail={`Отвлечение: ${distractorScore}/${distractorQuestions.length} · Длина: ${sequence.length}`}
         onRestart={startGame}
-        onBack={onBack}
       />
     </StudyShell>
   )

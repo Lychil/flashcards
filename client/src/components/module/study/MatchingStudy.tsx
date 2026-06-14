@@ -6,7 +6,7 @@ import { StudyResult, StudyShell } from './StudyShell'
 
 interface MatchingStudyProps {
   cards: Flashcard[]
-  onBack: () => void
+  accentColor?: string
 }
 
 type MatchSide = 'term' | 'definition'
@@ -18,7 +18,7 @@ interface MatchItem {
   text: string
 }
 
-export function MatchingStudy({ cards, onBack }: MatchingStudyProps) {
+export function MatchingStudy({ cards, accentColor }: MatchingStudyProps) {
   const pairCount = Math.min(cards.length, 6)
   const [session, setSession] = useState(0)
   const round = useMemo(() => pickRandom(cards, pairCount), [cards, pairCount, session])
@@ -96,7 +96,7 @@ export function MatchingStudy({ cards, onBack }: MatchingStudyProps) {
 
   if (finished) {
     return (
-      <StudyShell title="Сопоставление" onBack={onBack}>
+      <StudyShell title="Сопоставление" accentColor={accentColor}>
         <StudyResult
           title="Все пары найдены!"
           scoreLabel={`${round.length} пар`}
@@ -109,7 +109,6 @@ export function MatchingStudy({ cards, onBack }: MatchingStudyProps) {
             setAttempts(0)
             setFinished(false)
           }}
-          onBack={onBack}
         />
       </StudyShell>
     )
@@ -120,40 +119,41 @@ export function MatchingStudy({ cards, onBack }: MatchingStudyProps) {
       title="Сопоставление"
       subtitle={`${matchedIds.size} / ${round.length} пар`}
       progress={progress}
-      onBack={onBack}
+      accentColor={accentColor}
     >
-      <div className={`grid gap-4 p-4 sm:grid-cols-2 sm:p-6 ${homeCardClass}`}>
-        <div className="space-y-2">
-          <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
-            Термины
+      <div className={`p-4 sm:p-6 ${homeCardClass}`}>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+          <p className="mb-1 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
+            Лицевая сторона
           </p>
-          {items.terms.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              disabled={matchedIds.has(item.cardId)}
-              onClick={() => handlePick(item)}
-              className={`w-full cursor-pointer rounded-xl border px-3 py-3 text-left text-[14px] font-medium transition-colors disabled:cursor-default ${itemClass(item)}`}
-            >
-              {item.text}
-            </button>
-          ))}
-        </div>
-        <div className="space-y-2">
-          <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
-            Определения
+          <p className="mb-1 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
+            Обратная сторона
           </p>
-          {items.defs.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              disabled={matchedIds.has(item.cardId)}
-              onClick={() => handlePick(item)}
-              className={`w-full cursor-pointer rounded-xl border px-3 py-3 text-left text-[13px] leading-snug transition-colors disabled:cursor-default ${itemClass(item)}`}
-            >
-              {item.text}
-            </button>
-          ))}
+
+          {items.terms.map((term, index) => {
+            const def = items.defs[index]
+
+            return (
+              <div key={term.id} className="contents">
+                <button
+                  type="button"
+                  disabled={matchedIds.has(term.cardId)}
+                  onClick={() => handlePick(term)}
+                  className={`flex h-full min-h-[3.25rem] cursor-pointer items-start rounded-xl border px-3 py-3 text-left text-[14px] font-medium transition-colors disabled:cursor-default ${itemClass(term)}`}
+                >
+                  {term.text}
+                </button>
+                <button
+                  type="button"
+                  disabled={matchedIds.has(def.cardId)}
+                  onClick={() => handlePick(def)}
+                  className={`flex h-full min-h-[3.25rem] cursor-pointer items-start rounded-xl border px-3 py-3 text-left text-[14px] leading-snug transition-colors disabled:cursor-default ${itemClass(def)}`}
+                >
+                  {def.text}
+                </button>
+              </div>
+            )
+          })}
         </div>
       </div>
     </StudyShell>

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { LibraryGrid } from '../components/library/LibraryGrid'
 import { LibrarySearch, type LibraryScope } from '../components/library/LibrarySearch'
-import { homeLabelClass } from '../components/home/homeStyles'
+import { PageBreadcrumbs } from '../components/layout/PageBreadcrumbs'
+import { PageLayout } from '../components/layout/PageLayout'
 import { CreateDropdown } from '../components/ui/CreateDropdown'
 import {
   useGetCurrentUserQuery,
@@ -74,9 +75,12 @@ export function LibraryPage() {
   const resultCount = filteredFolders.length + filteredModules.length
 
   return (
-    <div className="w-full max-w-[1080px] py-10 lg:py-14">
+    <PageLayout>
       <header className="mb-8">
-        <p className={`mb-4 ${homeLabelClass}`}>Библиотека</p>
+        <PageBreadcrumbs
+          items={[{ label: 'Главная', to: '/' }, { label: 'Библиотека' }]}
+          className="mb-4"
+        />
         <div className="mb-8 flex items-start justify-between gap-6">
           <div className="min-w-0">
             <h1 className="mb-2 text-[30px] font-semibold leading-[1.12] tracking-[-0.03em] text-text-primary lg:text-[34px]">
@@ -105,6 +109,6 @@ export function LibraryPage() {
         currentUserId={user?.id}
         isLoading={isLoading}
       />
-    </div>
+    </PageLayout>
   )
 }

@@ -43,6 +43,6 @@ export function getFlashcardsForModule(moduleId: string, previewWords: string[])
   return previewWords.map((word, index) => ({
     id: `${moduleId}-${index}`,
     term: word,
-    definition: `Определение для «${word}»`,
+    definition: `Обратная сторона: «${word}»`,
   }))
 }

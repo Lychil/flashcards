@@ -1,12 +1,16 @@
+import { PageBreadcrumbs } from '../components/layout/PageBreadcrumbs'
+import { PageLayout } from '../components/layout/PageLayout'
+
 interface PlaceholderPageProps {
   title: string
 }
 
 export function PlaceholderPage({ title }: PlaceholderPageProps) {
   return (
-    <div className="w-full max-w-[1080px] py-8 lg:py-12">
-      <h1 className="text-2xl font-semibold text-text-primary mb-2">{title}</h1>
-      <p className="text-text-secondary text-sm">Раздел в разработке</p>
-    </div>
+    <PageLayout>
+      <PageBreadcrumbs items={[{ label: title }]} className="mb-4" />
+      <h1 className="mb-2 text-2xl font-semibold text-text-primary">{title}</h1>
+      <p className="text-sm text-text-secondary">Раздел в разработке</p>
+    </PageLayout>
   )
 }

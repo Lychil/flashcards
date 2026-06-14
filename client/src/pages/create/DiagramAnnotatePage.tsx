@@ -1,7 +1,8 @@
-import { ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { DiagramMarkerEditor } from '../../components/diagram/DiagramMarkerEditor'
+import { PageBreadcrumbs } from '../../components/layout/PageBreadcrumbs'
+import { PageLayout } from '../../components/layout/PageLayout'
 import { Button } from '../../components/ui/Button'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { clearDiagramDraft, setDiagramMarkers } from '../../store/slices/diagramDraftSlice'
@@ -35,25 +36,19 @@ export function DiagramAnnotatePage() {
   }
 
   return (
-    <div className="w-full max-w-[1400px] py-10 lg:py-14">
-      <Link
-        to="/create/diagram"
-        className={[
-          'inline-flex items-center gap-1.5 mb-8',
-          'text-[13px] font-medium text-text-secondary',
-          'hover:text-text-primary transition-colors duration-200',
-        ].join(' ')}
-      >
-        <ArrowLeft size={15} strokeWidth={1.5} />
-        Назад
-      </Link>
+    <PageLayout size="wide">
+      <PageBreadcrumbs
+        items={[
+          { label: 'Главная', to: '/' },
+          { label: 'Создание', to: '/create/diagram' },
+          { label: 'Разметка' },
+        ]}
+        className="mb-8"
+      />
 
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary mb-3">
-            Разметка
-          </p>
-          <h1 className="text-[28px] font-semibold text-text-primary tracking-[-0.03em] leading-[1.12] mb-1">
+          <h1 className="mb-1 text-[28px] font-semibold leading-[1.12] tracking-[-0.03em] text-text-primary">
             {draft.title || 'Новая диаграмма'}
           </h1>
           {draft.description && (
@@ -75,6 +70,6 @@ export function DiagramAnnotatePage() {
         markers={markers}
         onChange={handleMarkersChange}
       />
-    </div>
+    </PageLayout>
   )
 }

@@ -88,3 +88,35 @@ export function getCardColorTheme(baseColor: string): CardColorTheme {
     progress: rgbToHex(darken(rgb, 0.15)),
   }
 }
+
+export interface AccentForeground {
+  primary: string
+  secondary: string
+  muted: string
+  badgeBg: string
+  badgeBorder: string
+}
+
+export function getAccentForeground(baseColor: string): AccentForeground {
+  const { r, g, b } = hexToRgb(baseColor)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  const isLight = luminance > 0.58
+
+  if (isLight) {
+    return {
+      primary: '#12151a',
+      secondary: 'rgba(18, 21, 26, 0.78)',
+      muted: 'rgba(18, 21, 26, 0.55)',
+      badgeBg: 'rgba(255, 255, 255, 0.5)',
+      badgeBorder: 'rgba(255, 255, 255, 0.65)',
+    }
+  }
+
+  return {
+    primary: '#ffffff',
+    secondary: 'rgba(255, 255, 255, 0.88)',
+    muted: 'rgba(255, 255, 255, 0.65)',
+    badgeBg: 'rgba(255, 255, 255, 0.2)',
+    badgeBorder: 'rgba(255, 255, 255, 0.35)',
+  }
+}

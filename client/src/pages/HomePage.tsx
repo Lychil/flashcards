@@ -1,7 +1,16 @@
+import { Link } from 'react-router-dom'
 import { DiagramsPreview } from '../components/home/DiagramsPreview'
-import { homeCardClass } from '../components/home/homeStyles'
+import {
+  homeCardClass,
+  moduleTextButtonClass,
+  pageSectionTitleClass,
+  pageSectionTitleLargeClass,
+  statsLabelClass,
+} from '../components/home/homeStyles'
 import { HomeStats } from '../components/home/HomeStats'
 import { ReviewQueue } from '../components/home/ReviewQueue'
+import { PageBreadcrumbs } from '../components/layout/PageBreadcrumbs'
+import { PageLayout } from '../components/layout/PageLayout'
 import { CreateDropdown } from '../components/ui/CreateDropdown'
 import { ModuleCarousel } from '../components/ui/ModuleCarousel'
 import { ModuleSearch } from '../components/ui/ModuleSearch'
@@ -35,17 +44,15 @@ export function HomePage() {
   const stats = modules ? calcHomeStats(modules) : { cardsDue: 0, streakDays: 0, averageProgress: 0 }
 
   return (
-    <div className="w-full max-w-[1080px] py-10 lg:py-14">
-      <header className="mb-10">
-        <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary mb-4">
-          Главная
-        </p>
-        <div className="flex items-start justify-between gap-6 mb-6">
+    <PageLayout>
+      <header className="mb-8">
+        <PageBreadcrumbs items={[{ label: 'Главная' }]} className="mb-5" />
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-[30px] lg:text-[34px] font-semibold text-text-primary tracking-[-0.03em] leading-[1.12] mb-2">
+            <h1 className="mb-2 text-[26px] font-bold leading-tight tracking-[-0.03em] text-text-primary sm:text-[32px]">
               Привет, {user?.name ?? '...'}
             </h1>
-            <p className="text-[15px] text-text-secondary leading-relaxed">
+            <p className="text-[14px] leading-relaxed text-text-secondary sm:text-[15px]">
               Что будете изучать сегодня?
             </p>
           </div>
@@ -55,7 +62,7 @@ export function HomePage() {
       </header>
 
       {!isLoading && modules && modules.length > 0 && (
-        <section className="mb-12">
+        <section className="mb-8">
           <HomeStats
             cardsDue={stats.cardsDue}
             streakDays={stats.streakDays}
@@ -64,13 +71,11 @@ export function HomePage() {
         </section>
       )}
 
-      <section className="mb-12">
-        <div className="mb-5 flex items-baseline justify-between">
-          <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-text-primary">
-            Недавние модули
-          </h2>
+      <section className="mb-8">
+        <div className="mb-5 flex items-baseline justify-between gap-3">
+          <h2 className={pageSectionTitleLargeClass}>Недавние модули</h2>
           {modules && modules.length > 0 && (
-            <span className="text-[12px] text-text-tertiary tabular-nums">
+            <span className={`${statsLabelClass} normal-case tracking-normal`}>
               {modules.length}
             </span>
           )}
@@ -78,13 +83,11 @@ export function HomePage() {
         <ModuleCarousel modules={modules} isLoading={isLoading} />
       </section>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <section>
-          <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-text-primary">
-              Очередь повторений
-            </h2>
-            <span className="text-[12px] text-text-tertiary">по давности</span>
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className={pageSectionTitleClass}>Очередь повторений</h2>
+            <span className={statsLabelClass}>по давности</span>
           </div>
           {!isLoading && reviewQueue.length > 0 ? (
             <ReviewQueue modules={reviewQueue} />
@@ -96,9 +99,15 @@ export function HomePage() {
         </section>
 
         <section>
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className={pageSectionTitleClass}>Диаграммы</h2>
+            <Link to="/diagrams" className={moduleTextButtonClass}>
+              Все
+            </Link>
+          </div>
           <DiagramsPreview />
         </section>
       </div>
-    </div>
+    </PageLayout>
   )
 }

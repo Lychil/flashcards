@@ -1,6 +1,6 @@
 import { Map } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { homeCardClass, homeInteractiveClass } from './homeStyles'
+import { homeCardClass, moduleInteractiveClass } from './homeStyles'
 
 const mockDiagrams = [
   {
@@ -20,36 +20,25 @@ const mockDiagrams = [
 export function DiagramsPreview() {
   return (
     <div className={`p-4 ${homeCardClass}`}>
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-[15px] font-semibold tracking-[-0.02em] text-text-primary">
-          Диаграммы
-        </h3>
-        <Link
-          to="/diagrams"
-          className="rounded-lg px-2 py-1 text-[12px] font-medium text-text-secondary transition-colors hover:bg-surface-muted hover:text-text-primary"
-        >
-          Все
-        </Link>
-      </div>
       <ul className="flex flex-col gap-1.5">
         {mockDiagrams.map((diagram) => (
           <li key={diagram.id}>
             <Link
               to="/diagrams"
               className={[
-                'flex cursor-pointer items-center gap-3 rounded-2xl border border-transparent bg-surface-subtle/80 px-3 py-3',
-                homeInteractiveClass,
+                'flex cursor-pointer items-center gap-3 rounded-xl border border-transparent bg-surface-subtle/50 px-3 py-3',
+                moduleInteractiveClass,
                 'hover:border-border hover:bg-white',
               ].join(' ')}
             >
               <div
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                style={{ backgroundColor: `${diagram.color}22`, color: diagram.color }}
+                style={{ backgroundColor: `${diagram.color}20`, color: diagram.color }}
               >
                 <Map size={16} strokeWidth={1.5} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-medium text-text-primary">
+                <p className="truncate text-[13px] font-semibold text-text-primary">
                   {diagram.title}
                 </p>
                 <p className="text-[11px] text-text-tertiary">{diagram.markers} зон</p>
