@@ -1,4 +1,4 @@
-import { ChevronDown, FileText, Folder, Map, Plus } from 'lucide-react'
+import { ChevronDown, FileText, Folder, Map, Plus, Sparkles } from 'lucide-react'
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
@@ -29,6 +29,13 @@ const createOptions: CreateOption[] = [
     description: 'Текстовые или интерактивные карточки',
     to: '/create/module',
     icon: FileText,
+  },
+  {
+    id: 'ai-module',
+    label: 'Модуль с ИИ',
+    description: 'Сгенерировать карточки из материала',
+    to: '/create/ai',
+    icon: Sparkles,
   },
   {
     id: 'diagram',
@@ -139,7 +146,7 @@ export function CreateDropdown() {
             style={menuStyle}
             className={[
               'rounded-xl border border-border bg-white py-1.5',
-              'shadow-[0_8px_24px_rgba(26,29,33,0.06)]',
+              'border border-border',
             ].join(' ')}
           >
             {createOptions.map((option) => {

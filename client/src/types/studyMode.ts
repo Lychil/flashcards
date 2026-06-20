@@ -70,7 +70,7 @@ export const STUDY_MODES: StudyModeOption[] = [
   {
     id: 'gaps',
     title: 'Пропуски',
-    description: 'Восстановите термин по определению — настройте сложность',
+    description: 'Восстановите термин по определению с пропусками в слове',
     group: 'standard',
     icon: Puzzle,
     minCards: 1,

@@ -2,13 +2,14 @@ import type { ReactNode } from 'react'
 
 export type PageLayoutSize = 'default' | 'narrow' | 'wide'
 
-const SIZE_CLASS: Record<PageLayoutSize, string> = {
-  default: 'max-w-[1080px]',
+const sizeClass: Record<PageLayoutSize, string> = {
+  default: '',
   narrow: 'max-w-[640px]',
-  wide: 'max-w-[1400px]',
+  wide: '',
 }
 
-export const pageLayoutClass = `w-full ${SIZE_CLASS.default} py-10 lg:py-14`
+export const pageLayoutClass =
+  'w-full px-6 lg:px-10 pt-6 pb-10 lg:pt-8 lg:pb-12'
 
 interface PageLayoutProps {
   children: ReactNode
@@ -18,7 +19,9 @@ interface PageLayoutProps {
 
 export function PageLayout({ children, size = 'default', className = '' }: PageLayoutProps) {
   return (
-    <div className={['w-full py-10 lg:py-14', SIZE_CLASS[size], className].filter(Boolean).join(' ')}>
+    <div
+      className={[pageLayoutClass, sizeClass[size], className].filter(Boolean).join(' ')}
+    >
       {children}
     </div>
   )

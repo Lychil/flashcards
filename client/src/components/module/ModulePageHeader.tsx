@@ -6,6 +6,7 @@ import type { Module } from '../../types/module'
 import type { BreadcrumbItem } from '../layout/PageBreadcrumbs'
 import { PageBreadcrumbs } from '../layout/PageBreadcrumbs'
 import { Tooltip } from '../ui/Tooltip'
+import { ModuleRatingAction } from './ModuleRatingPanel'
 
 interface ModulePageHeaderProps {
   module: Module
@@ -135,28 +136,31 @@ export function ModulePageHeader({
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <MetricItem
-              tooltip={favoriteTooltip(module.favoriteCount)}
-              icon={<Heart size={13} strokeWidth={2} className="fill-red-500 text-red-500" aria-hidden />}
-              value={module.favoriteCount.toLocaleString('ru-RU')}
-            />
-            <MetricItem
-              tooltip={
-                module.rating > 0
-                  ? `Средняя оценка модуля: ${module.rating.toFixed(1)} из 5`
-                  : 'Пока без оценок'
-              }
-              icon={
-                <Star
-                  size={13}
-                  strokeWidth={2}
-                  className="fill-[#F5B84C] text-[#F5B84C]"
-                  aria-hidden
-                />
-              }
-              value={module.rating > 0 ? module.rating.toFixed(1) : '—'}
-            />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex gap-4">
+              <MetricItem
+                tooltip={favoriteTooltip(module.favoriteCount)}
+                icon={<Heart size={13} strokeWidth={2} className="fill-red-500 text-red-500" aria-hidden />}
+                value={module.favoriteCount.toLocaleString('ru-RU')}
+              />
+              <MetricItem
+                tooltip={
+                  module.rating > 0
+                    ? `Средняя оценка модуля: ${module.rating.toFixed(1)} из 5`
+                    : 'Пока без оценок'
+                }
+                icon={
+                  <Star
+                    size={13}
+                    strokeWidth={2}
+                    className="fill-[#F5B84C] text-[#F5B84C]"
+                    aria-hidden
+                  />
+                }
+                value={module.rating > 0 ? module.rating.toFixed(1) : '—'}
+              />
+            </div>
+            {!isSelf && currentUserId && <ModuleRatingAction moduleId={module.id} />}
           </div>
         </div>
       </div>

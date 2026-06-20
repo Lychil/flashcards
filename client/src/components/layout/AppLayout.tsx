@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { closeSidebar } from '../../store/slices/uiSlice'
-import { MobileHeader } from './MobileHeader'
+import { AppHeader } from './AppHeader'
 import { Sidebar } from './Sidebar'
 
 export function AppLayout() {
@@ -25,8 +25,8 @@ export function AppLayout() {
       )}
 
       <div className="flex flex-1 flex-col min-w-0 min-h-0 bg-white">
-        <MobileHeader />
-        <main className="flex-1 min-h-0 overflow-y-auto bg-white px-6 lg:px-10">
+        <AppHeader />
+        <main className="flex-1 min-h-0 overflow-y-auto bg-white">
           <Outlet />
         </main>
       </div>

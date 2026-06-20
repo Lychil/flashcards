@@ -119,7 +119,7 @@ export function ModuleImportExport({ moduleTitle, cards, onImport }: ModuleImpor
             <ul
               id={exportMenuId}
               role="menu"
-              className="absolute right-0 top-full z-30 mt-2 min-w-[220px] rounded-xl border border-border bg-white py-1.5 shadow-[0_8px_24px_rgba(26,29,33,0.06)]"
+              className="absolute right-0 top-full z-30 mt-2 min-w-[220px] rounded-xl border border-border bg-white py-1.5"
             >
               <li role="none">
                 <button
@@ -162,7 +162,7 @@ export function ModuleImportExport({ moduleTitle, cards, onImport }: ModuleImpor
             role="dialog"
             aria-modal="true"
             aria-labelledby={importDialogId}
-            className="w-full max-w-lg rounded-2xl border border-border bg-white p-5 shadow-[0_16px_48px_rgba(26,29,33,0.12)]"
+            className="w-full max-w-lg rounded-2xl border border-border bg-white p-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-start justify-between gap-3">

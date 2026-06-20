@@ -1,5 +1,8 @@
 export type ModuleType = 'text' | 'interactive'
 
+/** Целевая аудитория для глобального каталога */
+export type ModuleTrack = 'ege' | 'university' | 'medicine' | 'school' | 'languages' | 'profession'
+
 export interface ModuleAuthor {
   id: string
   name: string
@@ -13,6 +16,8 @@ export interface Module {
   previewWords: string[]
   wordCount: number
   category: string
+  /** Подборка в глобальном каталоге: ЕГЭ, вуз, медики… */
+  track?: ModuleTrack
   progress: number
   type: ModuleType
   color?: string

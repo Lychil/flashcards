@@ -108,7 +108,7 @@ function StreakCard({ streakDays }: { streakDays: number }) {
       <p className={`relative z-10 ${statsLabelClass}`}>Серия</p>
       <div className="relative z-10 mt-2 flex flex-1 flex-col items-center justify-center">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fbbf24]/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fbbf24]/30">
             <Flame
               size={22}
               strokeWidth={2}

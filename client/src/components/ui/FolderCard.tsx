@@ -43,7 +43,7 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
             style={{ top: GAP_TOP, backgroundColor: FOLDER_BODY_COLOR }}
           />
           <div
-            className="absolute z-10 rounded-[6px] border border-[#C9AD3D]/50 shadow-[0_1px_2px_rgba(26,29,33,0.06)]"
+            className="absolute z-10 rounded-[6px] border border-[#C9AD3D]/50"
             style={{
               top: GAP_TOP,
               left: LID_INSET,

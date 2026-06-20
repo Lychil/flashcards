@@ -16,11 +16,11 @@ import { filterCardsByTab, getCardStats, matchesCardSearch } from '../../lib/car
 import { enrichFlashcards } from '../../lib/enrichFlashcards'
 import { getAccentForeground } from '../../lib/cardColor'
 import { speakText } from '../../lib/speakText'
-import type { SrsRating } from '../../types/srs'
 import type { CardFilter, Flashcard } from '../../types/flashcard'
 import { SearchBar } from '../ui/SearchBar'
+import { EmptyPlaceholder } from '../ui/ContentPlaceholder'
 import { Tooltip } from '../ui/Tooltip'
-import { CardSrsSelect } from './CardSrsSelect'
+import { CardSrsBadge } from './CardSrsBadge'
 import {
   moduleGhostButtonClass,
   moduleInteractiveClass,
@@ -51,7 +51,6 @@ interface ModuleCardListProps {
   onAdd: (card: Omit<Flashcard, 'id'>) => void
   onUpdate: (id: string, patch: Partial<Omit<Flashcard, 'id'>>) => void
   onDelete: (ids: string[]) => void
-  onRate: (cardId: string, rating: SrsRating) => void
   className?: string
 }
 
@@ -63,7 +62,6 @@ export function ModuleCardList({
   onAdd,
   onUpdate,
   onDelete,
-  onRate,
   className = '',
 }: ModuleCardListProps) {
   const [search, setSearch] = useState('')
@@ -272,19 +270,17 @@ export function ModuleCardList({
       </div>
 
       {cards.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
-          <p className="text-[16px] font-semibold text-text-primary">Карточек пока нет</p>
-          <p className="mt-1 text-[14px] font-medium text-text-secondary">
-            Нажмите «Добавить», чтобы создать первую
-          </p>
-        </div>
+        <EmptyPlaceholder
+          variant="inline"
+          title="Карточек пока нет"
+          description='Нажмите «Добавить», чтобы создать первую'
+        />
       ) : filtered.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
-          <p className="text-[16px] font-semibold text-text-primary">Ничего не найдено</p>
-          <p className="mt-1 text-[14px] font-medium text-text-secondary">
-            Измените запрос или фильтр
-          </p>
-        </div>
+        <EmptyPlaceholder
+          variant="inline"
+          title="Ничего не найдено"
+          description="Измените запрос или фильтр"
+        />
       ) : (
         <>
           <div className="relative z-0 mb-2 hidden px-4 sm:grid sm:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1.2fr)_8.5rem_auto] sm:gap-x-4">
@@ -346,7 +342,16 @@ export function ModuleCardList({
                       {card.definition}
                     </p>
 
-                    <CardSrsSelect card={card} onRate={onRate} className="sm:justify-self-start" />
+                    {card.sourceRef && (
+                      <p
+                        className="col-span-full mt-1 line-clamp-1 text-[12px] text-text-tertiary sm:col-span-3"
+                        title={card.sourceRef.excerpt}
+                      >
+                        Источник: «{card.sourceRef.excerpt}»
+                      </p>
+                    )}
+
+                    <CardSrsBadge card={card} className="sm:justify-self-start" />
 
                     <div className="flex items-center gap-0.5 opacity-40 transition-opacity group-hover:opacity-100 sm:justify-end">
                       <IconAction label="Редактировать" onClick={() => startEdit(card)}>

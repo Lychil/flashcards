@@ -314,7 +314,7 @@ function AchievementBadgeHint({
       id={tooltipId}
       role="tooltip"
       style={style}
-      className="pointer-events-none w-max max-w-[220px] rounded-xl bg-[#12151a] px-3 py-2.5 text-[12px] font-medium leading-snug text-white shadow-lg"
+      className="pointer-events-none w-max max-w-[220px] rounded-xl bg-[#12151a] px-3 py-2.5 text-[12px] font-medium leading-snug text-white"
     >
       {text}
     </div>,

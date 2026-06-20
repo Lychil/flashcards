@@ -1,6 +1,7 @@
 export {
   pageSectionTitleClass,
   pageSectionTitleLargeClass,
+  pageSectionCountClass,
   statsCardClass as homeCardClass,
   statsInteractiveClass as homeInteractiveClass,
   statsLabelClass,

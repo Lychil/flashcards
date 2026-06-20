@@ -14,11 +14,7 @@ type SequenceType = 'numbers' | 'colors'
 
 const COLORS = ['#6366f1', '#F5B84C', '#6BC9A7', '#E879A9', '#5B9FD4', '#E0956B'] as const
 
-const DIFFICULTY = [
-  { id: 'easy', label: 'Лёгкий', length: 4, distractors: 1 },
-  { id: 'medium', label: 'Средний', length: 5, distractors: 2 },
-  { id: 'hard', label: 'Сложный', length: 6, distractors: 3 },
-] as const
+const DEFAULT_MNEMO_CONFIG = { length: 5, distractors: 2 } as const
 
 function buildSequence(type: SequenceType, length: number): string[] {
   if (type === 'numbers') {
@@ -30,14 +26,13 @@ function buildSequence(type: SequenceType, length: number): string[] {
 export function MnemoGame({ cards, accentColor }: MnemoGameProps) {
   const [phase, setPhase] = useState<MnemoPhase>('setup')
   const [sequenceType, setSequenceType] = useState<SequenceType>('colors')
-  const [difficulty, setDifficulty] = useState<(typeof DIFFICULTY)[number]['id']>('medium')
   const [sequence, setSequence] = useState<string[]>([])
   const [recallInput, setRecallInput] = useState<string[]>([])
   const [distractorIndex, setDistractorIndex] = useState(0)
   const [distractorScore, setDistractorScore] = useState(0)
   const [countdown, setCountdown] = useState(5)
 
-  const config = DIFFICULTY.find((d) => d.id === difficulty) ?? DIFFICULTY[1]
+  const config = DEFAULT_MNEMO_CONFIG
 
   const distractorQuestions = useMemo(
     () =>
@@ -124,26 +119,6 @@ export function MnemoGame({ cards, accentColor }: MnemoGameProps) {
               ))}
             </div>
           </div>
-          <div>
-            <p className="mb-3 text-[13px] font-medium text-text-primary">Сложность</p>
-            <div className="flex flex-wrap gap-2">
-              {DIFFICULTY.map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => setDifficulty(d.id)}
-                  className={[
-                    'cursor-pointer rounded-xl border px-4 py-2.5 text-[13px] font-medium transition-colors',
-                    difficulty === d.id
-                      ? 'border-[#6366f1] bg-[#6366f1]/10 text-[#6366f1]'
-                      : 'border-border text-text-secondary hover:border-[#d4d9e0]',
-                  ].join(' ')}
-                >
-                  {d.label} · {d.length} · {d.distractors} вопр.
-                </button>
-              ))}
-            </div>
-          </div>
           <button
             type="button"
             onClick={startGame}
@@ -168,7 +143,7 @@ export function MnemoGame({ cards, accentColor }: MnemoGameProps) {
               sequenceType === 'colors' ? (
                 <div
                   key={i}
-                  className="h-14 w-14 rounded-2xl shadow-[var(--shadow-card)]"
+                  className="h-14 w-14 rounded-2xl border border-border"
                   style={{ backgroundColor: item }}
                 />
               ) : (
@@ -240,7 +215,7 @@ export function MnemoGame({ cards, accentColor }: MnemoGameProps) {
                 ) : (
                   <div
                     key={i}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[16px] font-bold shadow-sm"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white text-[16px] font-bold"
                   >
                     {item}
                   </div>

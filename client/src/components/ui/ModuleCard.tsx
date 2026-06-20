@@ -1,5 +1,12 @@
+import { Heart, Star } from 'lucide-react'
+import type { KeyboardEvent } from 'react'
 import { resolveModuleBaseColor } from '../../lib/cardColor'
+import { formatCompactCount } from '../../lib/formatCompactCount'
 import { pluralizeCards } from '../../lib/pluralizeRu'
+import {
+  useGetModuleFavoritesQuery,
+  useToggleModuleFavoriteMutation,
+} from '../../store/api/modulesApi'
 import type { Module, ModuleAuthor } from '../../types/module'
 import { FolderShape } from './FolderShape'
 
@@ -67,38 +74,124 @@ function AuthorAvatar({ author, size = 20 }: { author: ModuleAuthor; size?: numb
   )
 }
 
-function ModuleAuthorBadge({
+function ModuleCardFooter({
   author,
   currentUserId,
+  isFavorited,
+  onToggleFavorite,
 }: {
   author: ModuleAuthor
   currentUserId?: string
+  isFavorited: boolean
+  onToggleFavorite: () => void
 }) {
   const isSelf = author.id === currentUserId
   const label = isSelf ? 'Вы' : author.name
+  const showFavorite = Boolean(currentUserId && !isSelf)
 
   return (
-    <div
-      className="absolute bottom-3 left-3 z-30 flex max-w-[calc(100%-24px)] items-center gap-1.5 rounded-full bg-black/18 py-1 pl-1 pr-2.5 backdrop-blur-sm ring-1 ring-inset ring-white/20"
-      title={isSelf ? 'Ваш модуль' : `Автор: ${author.name}`}
-    >
-      <AuthorAvatar author={author} size={20} />
-      <span className="truncate text-[10px] font-medium leading-none text-white/90">
-        {label}
-      </span>
+    <div className="absolute bottom-3 left-3 right-3 z-30 flex items-center justify-between gap-2">
+      <div
+        className={[
+          'flex min-w-0 items-center gap-1.5 rounded-full bg-black/18 py-1 pl-1 pr-2.5 backdrop-blur-sm ring-1 ring-inset ring-white/20',
+          showFavorite ? 'max-w-[calc(100%-36px)]' : 'max-w-full',
+        ].join(' ')}
+        title={isSelf ? 'Ваш модуль' : `Автор: ${author.name}`}
+      >
+        <AuthorAvatar author={author} size={20} />
+        <span className="truncate text-[10px] font-medium leading-none text-white/90">
+          {label}
+        </span>
+      </div>
+
+      {showFavorite && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleFavorite()
+          }}
+          aria-label={isFavorited ? 'Убрать из избранного' : 'Добавить в избранное'}
+          aria-pressed={isFavorited}
+          title={isFavorited ? 'Убрать из избранного' : 'Добавить в избранное'}
+          className={[
+            'flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full',
+            'bg-black/18 backdrop-blur-sm ring-1 ring-inset ring-white/20',
+            'transition-colors hover:bg-black/28',
+            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80',
+          ].join(' ')}
+        >
+          <Heart
+            size={14}
+            strokeWidth={2}
+            className={isFavorited ? 'fill-red-400 text-red-400' : 'text-white/90'}
+            aria-hidden
+          />
+        </button>
+      )}
+    </div>
+  )
+}
+
+function ModuleSocialMetrics({
+  rating,
+  favoriteCount,
+}: {
+  rating: number
+  favoriteCount: number
+}) {
+  if (rating <= 0 && favoriteCount <= 0) return null
+
+  return (
+    <div className="absolute left-3 top-[20px] z-30 flex items-center gap-1.5">
+      {rating > 0 && (
+        <span
+          className="inline-flex items-center gap-1 rounded-full bg-black/18 py-1.5 pl-2 pr-2.5 backdrop-blur-sm ring-1 ring-inset ring-white/20"
+          title={`Оценка ${rating.toFixed(1)} из 5`}
+        >
+          <Star size={12} strokeWidth={2} className="fill-[#F5B84C] text-[#F5B84C]" aria-hidden />
+          <span className="text-[11px] font-semibold leading-none tabular-nums text-white/95">
+            {rating.toFixed(1)}
+          </span>
+        </span>
+      )}
+      {favoriteCount > 0 && (
+        <span
+          className="inline-flex items-center gap-1 rounded-full bg-black/18 py-1.5 pl-2 pr-2.5 backdrop-blur-sm ring-1 ring-inset ring-white/20"
+          title={`${favoriteCount.toLocaleString('ru-RU')} в избранном`}
+        >
+          <Heart size={12} strokeWidth={2} className="fill-red-400 text-red-400" aria-hidden />
+          <span className="text-[11px] font-semibold leading-none tabular-nums text-white/95">
+            {formatCompactCount(favoriteCount)}
+          </span>
+        </span>
+      )}
     </div>
   )
 }
 
 export function ModuleCard({ module, currentUserId, onClick }: ModuleCardProps) {
+  const { data: favoriteIds = [] } = useGetModuleFavoritesQuery()
+  const [toggleFavorite] = useToggleModuleFavoriteMutation()
+  const isFavorited = favoriteIds.includes(module.id)
+
   const baseColor = resolveModuleBaseColor(module.id, module.color)
   const learnedCount = Math.round((module.wordCount * module.progress) / 100)
   const showStack = module.wordCount > 0
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onClick?.()
+    }
+  }
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       className={[
         'group relative flex cursor-pointer flex-col overflow-visible text-left',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
@@ -138,7 +231,13 @@ export function ModuleCard({ module, currentUserId, onClick }: ModuleCardProps) 
         >
           <FolderShape color={baseColor} />
 
-          <ModuleAuthorBadge author={module.author} currentUserId={currentUserId} />
+          <ModuleSocialMetrics rating={module.rating} favoriteCount={module.favoriteCount} />
+          <ModuleCardFooter
+            author={module.author}
+            currentUserId={currentUserId}
+            isFavorited={isFavorited}
+            onToggleFavorite={() => toggleFavorite(module.id)}
+          />
         </div>
       </div>
 
@@ -174,6 +273,6 @@ export function ModuleCard({ module, currentUserId, onClick }: ModuleCardProps) 
           />
         </div>
       </div>
-    </button>
+    </div>
   )
 }

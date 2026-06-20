@@ -12,11 +12,7 @@ interface GapTestStudyProps {
   accentColor?: string
 }
 
-const DIFFICULTY_OPTIONS = [
-  { value: 25, label: 'Лёгкий' },
-  { value: 50, label: 'Средний' },
-  { value: 75, label: 'Сложный' },
-]
+const GAP_HIDDEN_PERCENT = 50
 
 interface GapQuestion {
   card: Flashcard
@@ -24,21 +20,17 @@ interface GapQuestion {
   answer: string
 }
 
-function buildGapQuestions(cards: Flashcard[], difficulty: number): GapQuestion[] {
+function buildGapQuestions(cards: Flashcard[]): GapQuestion[] {
   return pickSessionCards(cards, TEST_SESSION_SIZE).map((card) => {
-    const gap = buildGapWord(card.term, difficulty)
+    const gap = buildGapWord(card.term, GAP_HIDDEN_PERCENT)
     return { card, display: gap.display, answer: gap.answer }
   })
 }
 
 export function GapTestStudy({ cards, accentColor }: GapTestStudyProps) {
-  const [difficulty, setDifficulty] = useState(50)
   const [started, setStarted] = useState(false)
   const [session, setSession] = useState(0)
-  const questions = useMemo(
-    () => buildGapQuestions(cards, difficulty),
-    [cards, difficulty, session],
-  )
+  const questions = useMemo(() => buildGapQuestions(cards), [cards, session])
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [answers, setAnswers] = useState<TestAnswerReview[]>([])
   const [finished, setFinished] = useState(false)
@@ -70,28 +62,10 @@ export function GapTestStudy({ cards, accentColor }: GapTestStudyProps) {
     return (
       <StudyShell title="Пропуски" accentColor={accentColor}>
         <div className={`p-6 ${homeCardClass}`}>
-          <p className="mb-4 text-[14px] text-text-secondary">
+          <p className="mb-6 text-[14px] text-text-secondary">
             На одной странице — {Math.min(TEST_SESSION_SIZE, cards.length)} заданий. Результат
             увидите после ответа на все.
           </p>
-          <p className="mb-3 text-[13px] font-medium text-text-primary">Сложность</p>
-          <div className="mb-6 flex flex-wrap gap-2">
-            {DIFFICULTY_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setDifficulty(opt.value)}
-                className={[
-                  'cursor-pointer rounded-xl border px-4 py-2.5 text-[13px] font-medium transition-colors',
-                  difficulty === opt.value
-                    ? 'border-text-tertiary bg-surface-subtle text-text-primary'
-                    : 'border-border text-text-secondary hover:border-[#d4d9e0] hover:text-text-primary',
-                ].join(' ')}
-              >
-                {opt.label} · {opt.value}%
-              </button>
-            ))}
-          </div>
           <button
             type="button"
             onClick={() => setStarted(true)}
@@ -109,15 +83,12 @@ export function GapTestStudy({ cards, accentColor }: GapTestStudyProps) {
   }
 
   if (finished) {
-    const difficultyLabel = DIFFICULTY_OPTIONS.find((o) => o.value === difficulty)?.label
-
     return (
       <StudyShell title="Пропуски" accentColor={accentColor}>
         <StudyTestResults
           title="Упражнение завершено"
           answers={answers}
           accentColor={accentColor}
-          detail={`Сложность: ${difficultyLabel ?? difficulty}% скрытых букв`}
           onRestart={() => {
             setSession((s) => s + 1)
             setStarted(false)

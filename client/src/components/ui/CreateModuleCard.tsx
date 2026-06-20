@@ -25,8 +25,8 @@ export function CreateModuleCard({
         'border transition-all duration-200',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
         featured
-          ? 'border-text-primary/15 shadow-card hover:shadow-card-hover hover:border-text-primary/25'
-          : 'border-border hover:border-text-tertiary/40 hover:shadow-soft',
+          ? 'border-text-primary/15 hover:border-text-primary/25'
+          : 'border-border hover:border-text-tertiary/40',
       ].join(' ')}
     >
       <div className="flex items-start justify-between gap-6">
