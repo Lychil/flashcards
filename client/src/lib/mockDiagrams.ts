@@ -1,7 +1,4 @@
-import type { DiagramMarker } from '../types/diagram'
-import type { ModuleAuthor } from '../types/module'
-
-type ReviewMode = 'label-recall' | 'zone-pick'
+import type { Diagram } from '../types/diagram'
 
 function svgDataUrl(svg: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
@@ -21,23 +18,7 @@ function mockUploadedDiagramImage(accent: string, accentSoft: string): string {
   `)
 }
 
-export interface MockDiagram {
-  id: string
-  sourceDiagramId?: string
-  ownerId?: string
-  title: string
-  description: string
-  author: ModuleAuthor
-  subject: string
-  accent: string
-  accentSoft: string
-  updatedAt: string
-  imageDataUrl: string
-  markers: DiagramMarker[]
-  reviewMode: ReviewMode
-}
-
-export const mockDiagrams: MockDiagram[] = [
+export const mockDiagrams: Diagram[] = [
   {
     id: '1',
     title: 'Строение сердца',
@@ -246,6 +227,6 @@ export const mockDiagrams: MockDiagram[] = [
   },
 ]
 
-export function getMockDiagramById(id: string): MockDiagram | undefined {
+export function getMockDiagramById(id: string): Diagram | undefined {
   return mockDiagrams.find((diagram) => diagram.id === id)
 }

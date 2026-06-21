@@ -1,8 +1,8 @@
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import type { MockDiagram } from '../../lib/mockDiagrams'
+import type { Diagram } from '../../types/diagram'
 
-export function DiagramImagePreview({ diagram, compact = false }: { diagram: MockDiagram; compact?: boolean }) {
+export function DiagramImagePreview({ diagram, compact = false }: { diagram: Diagram; compact?: boolean }) {
   const markers = compact ? diagram.markers.slice(0, 4) : diagram.markers
 
   return (
@@ -36,7 +36,7 @@ export function DiagramImagePreview({ diagram, compact = false }: { diagram: Moc
   )
 }
 
-export function DiagramCard({ diagram }: { diagram: MockDiagram }) {
+export function DiagramCard({ diagram }: { diagram: Diagram }) {
   return (
     <Link
       to={`/diagrams/${diagram.id}`}

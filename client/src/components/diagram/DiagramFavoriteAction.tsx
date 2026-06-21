@@ -1,6 +1,6 @@
-import { Heart } from 'lucide-react'
 import { useState } from 'react'
 import { diagramFavoritesRepository } from '../../services/diagramFavoritesRepository'
+import { FavoriteToggleButton } from '../ui/FavoriteToggleButton'
 import { Tooltip } from '../ui/Tooltip'
 
 interface DiagramFavoriteActionProps {
@@ -35,25 +35,18 @@ export function DiagramFavoriteAction({
       ].filter(Boolean).join(' ')
 
   const button = (
-    <button
-      type="button"
-      onClick={() => {
+    <FavoriteToggleButton
+      isFavorited={isFavorited}
+      onToggle={() => {
         const next = diagramFavoritesRepository.toggle(diagramId)
         setIsFavorited(next)
         onChange?.()
       }}
-      aria-label={label}
-      aria-pressed={isFavorited}
       className={actionClass}
+      iconClassName={isFavorited ? 'fill-red-400 text-red-400' : undefined}
     >
-      <Heart
-        size={15}
-        strokeWidth={2}
-        className={isFavorited ? 'fill-red-400 text-red-400' : undefined}
-        aria-hidden
-      />
       {!isIcon && (isFavorited ? 'В избранном' : 'В избранное')}
-    </button>
+    </FavoriteToggleButton>
   )
 
   return isIcon ? (

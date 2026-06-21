@@ -1,48 +1,40 @@
-import { mockDiagrams, type MockDiagram } from '../lib/mockDiagrams'
+import { mockDiagrams } from '../lib/mockDiagrams'
+import type { Diagram } from '../types/diagram'
 import { STORAGE_KEYS } from './storageKeys'
+import { readJson, writeJson } from './storageUtils'
 
 const CURRENT_USER_ID = '1'
 const CURRENT_USER = { id: CURRENT_USER_ID, name: 'Александр' }
-
-function readJson<T>(key: string): T | null {
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return null
-    return JSON.parse(raw) as T
-  } catch {
-    return null
-  }
-}
 
 export function getLinkedDiagramCopyId(sourceDiagramId: string): string {
   return `copy-${sourceDiagramId}`
 }
 
 export const diagramRepository = {
-  loadLibrary(): MockDiagram[] {
-    return readJson<MockDiagram[]>(STORAGE_KEYS.userDiagrams) ?? []
+  loadLibrary(): Diagram[] {
+    return readJson<Diagram[]>(STORAGE_KEYS.userDiagrams) ?? []
   },
 
-  save(diagram: MockDiagram): void {
+  save(diagram: Diagram): void {
     const existing = this.loadLibrary()
     const index = existing.findIndex((item) => item.id === diagram.id)
     const next =
       index >= 0
         ? existing.map((item, itemIndex) => (itemIndex === index ? diagram : item))
         : [...existing, diagram]
-    localStorage.setItem(STORAGE_KEYS.userDiagrams, JSON.stringify(next))
+    writeJson(STORAGE_KEYS.userDiagrams, next)
   },
 
-  findAny(id: string): MockDiagram | undefined {
+  findAny(id: string): Diagram | undefined {
     return this.loadLibrary().find((diagram) => diagram.id === id) ?? mockDiagrams.find((diagram) => diagram.id === id)
   },
 
-  findLibraryCopy(sourceDiagramId: string): MockDiagram | undefined {
+  findLibraryCopy(sourceDiagramId: string): Diagram | undefined {
     const canonicalSourceId = this.findAny(sourceDiagramId)?.sourceDiagramId ?? sourceDiagramId
     return this.loadLibrary().find((diagram) => diagram.sourceDiagramId === canonicalSourceId)
   },
 
-  copyToLibrary(sourceDiagramId: string): MockDiagram {
+  copyToLibrary(sourceDiagramId: string): Diagram {
     const source = this.findAny(sourceDiagramId)
     if (!source) throw new Error('Diagram not found')
 
@@ -50,7 +42,7 @@ export const diagramRepository = {
     const existing = this.findLibraryCopy(canonicalSourceId)
     if (existing) return existing
 
-    const copy: MockDiagram = {
+    const copy: Diagram = {
       ...source,
       id: getLinkedDiagramCopyId(canonicalSourceId),
       sourceDiagramId: canonicalSourceId,
@@ -67,8 +59,8 @@ export const diagramRepository = {
     return copy
   },
 
-  create(diagram: Pick<MockDiagram, 'title' | 'description' | 'imageDataUrl' | 'markers'>): MockDiagram {
-    const saved: MockDiagram = {
+  create(diagram: Pick<Diagram, 'title' | 'description' | 'imageDataUrl' | 'markers'>): Diagram {
+    const saved: Diagram = {
       ...diagram,
       id: `diagram-${Date.now()}`,
       ownerId: CURRENT_USER_ID,
@@ -83,11 +75,11 @@ export const diagramRepository = {
     return saved
   },
 
-  update(diagramId: string, patch: Pick<MockDiagram, 'title' | 'description' | 'imageDataUrl' | 'markers'>): MockDiagram {
+  update(diagramId: string, patch: Pick<Diagram, 'title' | 'description' | 'imageDataUrl' | 'markers'>): Diagram {
     const existing = this.loadLibrary().find((diagram) => diagram.id === diagramId)
     if (!existing) throw new Error('Diagram is not in library')
 
-    const next: MockDiagram = {
+    const next: Diagram = {
       ...existing,
       ...patch,
       updatedAt: 'Только что',

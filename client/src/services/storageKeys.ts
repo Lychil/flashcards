@@ -8,4 +8,5 @@ export const STORAGE_KEYS = {
   moduleRatings: 'flashcards:module-ratings',
   diagramRatings: 'flashcards:diagram-ratings',
   generationQuota: 'flashcards:ai-generation-quota',
+  reviewDaily: 'flashcards-daily-review',
 } as const

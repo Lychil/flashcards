@@ -1,3 +1,5 @@
+import type { Author } from './common'
+
 export type ModuleType = 'text' | 'interactive'
 
 /** public — открыт для всех, private — закрыт (только автор) */
@@ -6,11 +8,7 @@ export type ModuleVisibility = 'public' | 'private'
 /** Целевая аудитория для глобального каталога */
 export type ModuleTrack = 'ege' | 'university' | 'medicine' | 'school' | 'languages' | 'profession'
 
-export interface ModuleAuthor {
-  id: string
-  name: string
-  avatarUrl?: string
-}
+export type ModuleAuthor = Author
 
 export interface Module {
   id: string
@@ -36,9 +34,4 @@ export interface Module {
   updatedAt: string
 }
 
-export interface User {
-  id: string
-  name: string
-  avatarUrl?: string
-  isPremium?: boolean
-}
+export type { User } from './common'

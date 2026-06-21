@@ -8,6 +8,7 @@ import {
   useToggleModuleFavoriteMutation,
 } from '../../store/api/modulesApi'
 import type { Module, ModuleAuthor } from '../../types/module'
+import { FavoriteToggleButton } from './FavoriteToggleButton'
 import { FolderShape } from './FolderShape'
 import { ModuleVisibilityBadge } from '../module/ModuleVisibilityBadge'
 
@@ -106,29 +107,19 @@ function ModuleCardFooter({
       </div>
 
       {showFavorite && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleFavorite()
-          }}
-          aria-label={isFavorited ? 'Убрать из избранного' : 'Добавить в избранное'}
-          aria-pressed={isFavorited}
-          title={isFavorited ? 'Убрать из избранного' : 'Добавить в избранное'}
+        <FavoriteToggleButton
+          isFavorited={isFavorited}
+          onToggle={onToggleFavorite}
+          stopPropagation
           className={[
             'flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full',
             'bg-black/18 backdrop-blur-sm ring-1 ring-inset ring-white/20',
             'transition-colors hover:bg-black/28',
             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80',
           ].join(' ')}
-        >
-          <Heart
-            size={14}
-            strokeWidth={2}
-            className={isFavorited ? 'fill-red-400 text-red-400' : 'text-white/90'}
-            aria-hidden
-          />
-        </button>
+          iconSize={14}
+          iconClassName={isFavorited ? 'fill-red-400 text-red-400' : 'text-white/90'}
+        />
       )}
     </div>
   )

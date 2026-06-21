@@ -16,7 +16,7 @@ import {
   useGetLibraryModulesQuery,
 } from '../store/api/modulesApi'
 import { diagramRepository } from '../services/diagramRepository'
-import type { MockDiagram } from '../lib/mockDiagrams'
+import type { Diagram } from '../types/diagram'
 import type { LibraryFolder } from '../types/library'
 import type { Module } from '../types/module'
 import { useNavigate } from 'react-router-dom'
@@ -46,7 +46,7 @@ function folderMatchesQuery(folder: LibraryFolder, query: string): boolean {
   return [folder.name, folder.description].some((value) => matchesQuery(value, query))
 }
 
-function diagramMatchesQuery(diagram: MockDiagram, query: string): boolean {
+function diagramMatchesQuery(diagram: Diagram, query: string): boolean {
   if (!query) return true
   return [
     diagram.title,
@@ -95,7 +95,7 @@ function ModuleGrid({
   )
 }
 
-function DiagramGrid({ diagrams }: { diagrams: MockDiagram[] }) {
+function DiagramGrid({ diagrams }: { diagrams: Diagram[] }) {
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
       {diagrams.map((diagram) => (

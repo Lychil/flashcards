@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'flashcards-daily-review'
+import { STORAGE_KEYS } from './storageKeys'
 
 interface ReviewDailyLog {
   date: string
@@ -12,7 +12,7 @@ function todayKey(date = new Date()): string {
 
 function load(): ReviewDailyLog {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(STORAGE_KEYS.reviewDaily)
     if (!raw) return { date: todayKey(), newCards: 0, reviews: 0 }
     const parsed = JSON.parse(raw) as ReviewDailyLog
     if (parsed.date !== todayKey()) {
@@ -25,7 +25,7 @@ function load(): ReviewDailyLog {
 }
 
 function save(log: ReviewDailyLog) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(log))
+  localStorage.setItem(STORAGE_KEYS.reviewDaily, JSON.stringify(log))
 }
 
 export const reviewDailyRepository = {

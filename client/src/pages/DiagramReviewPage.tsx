@@ -6,13 +6,13 @@ import { DiagramLibraryAction } from '../components/diagram/DiagramLibraryAction
 import { PageBreadcrumbs } from '../components/layout/PageBreadcrumbs'
 import { PageLayout } from '../components/layout/PageLayout'
 import { EmptyPlaceholder } from '../components/ui/ContentPlaceholder'
-import type { MockDiagram } from '../lib/mockDiagrams'
+import type { Diagram } from '../types/diagram'
 import { diagramRepository } from '../services/diagramRepository'
 import type { DiagramMarker } from '../types/diagram'
 
 type AnswerStatus = 'idle' | 'correct' | 'wrong'
 
-const modeTitle: Record<MockDiagram['reviewMode'], string> = {
+const modeTitle: Record<Diagram['reviewMode'], string> = {
   'label-recall': 'Найти метку',
   'zone-pick': 'Выбрать зону',
 }
@@ -29,7 +29,7 @@ function DiagramReviewCanvas({
   status,
   onPick,
 }: {
-  diagram: MockDiagram
+  diagram: Diagram
   activeMarker: DiagramMarker
   answeredIds: Set<string>
   selectedMarkerId: string | null
