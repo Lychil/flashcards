@@ -189,7 +189,7 @@ export function AnagramGame({ cards, accentColor, onRate }: AnagramGameProps) {
                   state.picked.map((letterIndex, pickedIndex) => (
                     <span
                       key={`${letterIndex}-${pickedIndex}`}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-[16px] font-semibold uppercase shadow-sm"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-white text-[16px] font-semibold uppercase"
                     >
                       {question.letterPool[letterIndex]}
                     </span>

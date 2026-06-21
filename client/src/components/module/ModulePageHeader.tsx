@@ -1,11 +1,17 @@
 import type { ReactNode } from 'react'
 import { Heart, Star } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { getCardColorTheme, resolveModuleBaseColor } from '../../lib/cardColor'
+import { isModuleLinkedCopy, isModuleOwner } from '../../lib/moduleAccess'
 import { getStudyModeById, type StudyModeId } from '../../types/studyMode'
 import type { Module } from '../../types/module'
 import type { BreadcrumbItem } from '../layout/PageBreadcrumbs'
 import { PageBreadcrumbs } from '../layout/PageBreadcrumbs'
 import { Tooltip } from '../ui/Tooltip'
+import { useGetModuleQuery } from '../../store/api/modulesApi'
+import { ModuleFavoriteAction } from './ModuleFavoriteAction'
+import { ModuleRatingAction } from './ModuleRatingPanel'
+import { ModuleVisibilityBadge } from './ModuleVisibilityBadge'
 
 interface ModulePageHeaderProps {
   module: Module
@@ -71,7 +77,13 @@ export function ModulePageHeader({
   className = '',
 }: ModulePageHeaderProps) {
   const accent = getCardColorTheme(resolveModuleBaseColor(module.id, module.color)).base
-  const isSelf = module.author.id === currentUserId
+  const isLinkedCopy = isModuleLinkedCopy(module)
+  const isSelf = isModuleOwner(module, currentUserId)
+  const { data: sourceDetail } = useGetModuleQuery(module.sourceModuleId ?? '', {
+    skip: !isLinkedCopy || !module.sourceModuleId,
+  })
+  const displayAuthor = isLinkedCopy && sourceDetail ? sourceDetail.module.author : module.author
+  const metricsModule = isLinkedCopy && sourceDetail ? sourceDetail.module : module
   const breadcrumbItems = getModuleBreadcrumbItems(module)
   const isCompact = variant === 'compact'
 
@@ -86,6 +98,15 @@ export function ModulePageHeader({
         >
           {module.category}
         </span>
+        <ModuleVisibilityBadge module={module} variant="inline" />
+        {isLinkedCopy && module.sourceModuleId && (
+          <Link
+            to={`/module/${module.sourceModuleId}`}
+            className="rounded-full bg-surface-subtle px-2.5 py-0.5 text-[11px] font-semibold text-text-secondary transition-colors hover:bg-surface-muted hover:text-text-primary sm:text-[12px]"
+          >
+            Копия · оригинал
+          </Link>
+        )}
         <span className="text-[11px] font-medium text-text-tertiary sm:text-[12px]">
           {module.type === 'interactive' ? 'Интерактивный' : 'Текстовый'}
         </span>
@@ -123,40 +144,54 @@ export function ModulePageHeader({
                 isCompact ? 'h-9 w-9 text-[12px]' : 'h-10 w-10 text-[13px]',
               ].join(' ')}
               style={{ backgroundColor: accent }}
-              title={isSelf ? 'Вы' : module.author.name}
+              title={isLinkedCopy ? displayAuthor.name : isSelf ? 'Вы' : displayAuthor.name}
             >
-              {isSelf ? 'Вы' : module.author.name.charAt(0)}
+              {isLinkedCopy
+                ? displayAuthor.name.charAt(0)
+                : isSelf
+                  ? 'Вы'
+                  : displayAuthor.name.charAt(0)}
             </div>
             <div>
               <p className="text-[13px] font-semibold text-text-primary sm:text-[14px]">
-                {isSelf ? 'Ваш модуль' : module.author.name}
+                {isLinkedCopy ? displayAuthor.name : isSelf ? 'Ваш модуль' : displayAuthor.name}
               </p>
-              <p className="text-[11px] text-text-tertiary sm:text-[12px]">Автор</p>
+              <p className="text-[11px] text-text-tertiary sm:text-[12px]">
+                {isLinkedCopy ? 'Автор оригинала' : 'Автор'}
+              </p>
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <MetricItem
-              tooltip={favoriteTooltip(module.favoriteCount)}
-              icon={<Heart size={13} strokeWidth={2} className="fill-red-500 text-red-500" aria-hidden />}
-              value={module.favoriteCount.toLocaleString('ru-RU')}
-            />
-            <MetricItem
-              tooltip={
-                module.rating > 0
-                  ? `Средняя оценка модуля: ${module.rating.toFixed(1)} из 5`
-                  : 'Пока без оценок'
-              }
-              icon={
-                <Star
-                  size={13}
-                  strokeWidth={2}
-                  className="fill-[#F5B84C] text-[#F5B84C]"
-                  aria-hidden
-                />
-              }
-              value={module.rating > 0 ? module.rating.toFixed(1) : '—'}
-            />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex gap-4">
+              <MetricItem
+                tooltip={favoriteTooltip(metricsModule.favoriteCount)}
+                icon={<Heart size={13} strokeWidth={2} className="fill-red-500 text-red-500" aria-hidden />}
+                value={metricsModule.favoriteCount.toLocaleString('ru-RU')}
+              />
+              <MetricItem
+                tooltip={
+                  metricsModule.rating > 0
+                    ? `Средняя оценка модуля: ${metricsModule.rating.toFixed(1)} из 5`
+                    : 'Пока без оценок'
+                }
+                icon={
+                  <Star
+                    size={13}
+                    strokeWidth={2}
+                    className="fill-[#F5B84C] text-[#F5B84C]"
+                    aria-hidden
+                  />
+                }
+                value={metricsModule.rating > 0 ? metricsModule.rating.toFixed(1) : '—'}
+              />
+            </div>
+            {!isSelf && !isLinkedCopy && currentUserId && (
+              <div className="flex items-center gap-2">
+                <ModuleFavoriteAction moduleId={metricsModule.id} />
+                <ModuleRatingAction moduleId={metricsModule.id} />
+              </div>
+            )}
           </div>
         </div>
       </div>

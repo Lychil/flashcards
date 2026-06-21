@@ -92,7 +92,7 @@ export function CardSrsSelect({ card, onRate, className = '' }: CardSrsSelectPro
           className={[
             'absolute left-0 top-full z-30 mt-1.5 min-w-full overflow-hidden',
             'rounded-xl border border-border bg-white py-1',
-            'shadow-[0_8px_24px_rgba(26,29,33,0.06)]',
+            'border border-border',
           ].join(' ')}
         >
           {CARD_SRS_CHOICES.map((option) => {

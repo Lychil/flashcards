@@ -1,9 +1,10 @@
 import {
   applySrsRating,
   createDefaultSrs,
+  getRetrievability,
   getSrsVisualStatus,
-  SRS_INTERVALS,
-} from './spacedRepetition'
+  TARGET_RETENTION,
+} from './fsrsEngine'
 import type { Flashcard } from '../types/flashcard'
 import type { CardSrsData, CardSrsChoice, SrsRating } from '../types/srs'
 
@@ -39,18 +40,15 @@ const CHOICE_TO_RATING: Record<CardSrsChoice, SrsRating> = {
 }
 
 export function getCardSrsChoice(card: Flashcard, now = Date.now()): CardSrsChoice {
-  const srs = card.srs ?? createDefaultSrs(now)
   const status = getSrsVisualStatus(card, now)
+  const retrievability = getRetrievability(card, now)
 
-  if (status === 'review' || status === 'mature') {
+  if (status === 'mature' || (status === 'review' && retrievability >= TARGET_RETENTION)) {
     return 'know'
   }
 
-  if (
-    srs.repetitions === 0 &&
-    srs.lastReviewedAt &&
-    srs.intervalMs <= SRS_INTERVALS.again
-  ) {
+  const srs = card.srs ?? createDefaultSrs(now)
+  if (srs.reps === 0 && srs.lastReview && retrievability < 0.5) {
     return 'dont_know'
   }
 

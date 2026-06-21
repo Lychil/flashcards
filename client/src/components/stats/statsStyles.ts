@@ -20,3 +20,6 @@ export const pageSectionTitleClass =
 
 export const pageSectionTitleLargeClass =
   'text-[22px] font-bold tracking-[-0.02em] text-text-primary'
+
+export const pageSectionCountClass =
+  'text-[18px] font-semibold tabular-nums leading-none tracking-[-0.02em] text-text-tertiary'

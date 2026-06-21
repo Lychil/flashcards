@@ -179,7 +179,7 @@ export function ModuleSearch() {
           className={[
             'absolute z-20 left-0 right-0 top-full mt-2',
             'bg-white border border-border rounded-xl',
-            'shadow-[0_8px_24px_rgba(26,29,33,0.06)]',
+            'border border-border',
             'py-1.5 overflow-hidden',
           ].join(' ')}
         >

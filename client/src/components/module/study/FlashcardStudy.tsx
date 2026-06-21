@@ -1,4 +1,3 @@
-import { Shuffle } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { shuffle } from '../../../lib/shuffle'
 import type { SrsRating } from '../../../types/srs'
@@ -25,16 +24,19 @@ export function FlashcardStudy({ cards, accentColor, onRate }: FlashcardStudyPro
     setIndex(0)
     setFlipped(false)
     setRatedCount(0)
-  }, [deckKey]) // cards intentionally omitted — SRS updates must not reset the session
+  }, [deckKey])
 
   const current = deck[index]
   const total = deck.length
   const progress = total === 0 ? 0 : (ratedCount / total) * 100
 
-  const toggleFlip = useCallback(() => setFlipped((f) => !f), [])
+  const toggleFlip = useCallback(() => {
+    if (!current) return
+    setFlipped((f) => !f)
+  }, [current])
 
   const rate = (rating: SrsRating) => {
-    if (!current) return
+    if (!current || !flipped) return
     onRate?.(current.id, rating)
     setRatedCount((c) => c + 1)
     if (index < total - 1) {
@@ -67,7 +69,7 @@ export function FlashcardStudy({ cards, accentColor, onRate }: FlashcardStudyPro
 
   return (
     <StudyShell
-      title="Карточки"
+      title="Повторение"
       subtitle={finished ? `Оценено ${ratedCount} из ${total}` : `${index + 1} из ${total}`}
       progress={progress}
       accentColor={accentColor}
@@ -76,39 +78,46 @@ export function FlashcardStudy({ cards, accentColor, onRate }: FlashcardStudyPro
         <button
           type="button"
           onClick={toggleFlip}
-          className="flashcard-scene mb-6 w-full max-w-[640px] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#6366f1]"
+          className="mb-6 w-full max-w-[640px] cursor-pointer rounded-[22px] border border-border bg-white px-6 py-10 hover:border-[#d4d9e0] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#7F77DD] sm:px-10 sm:py-12 min-h-[280px] sm:min-h-[320px] flex flex-col items-center justify-center"
         >
-          <div className={['flashcard-inner', flipped ? 'is-flipped' : ''].join(' ')}>
-            <div className="flashcard-face flex flex-col items-center justify-center rounded-[20px] border border-border bg-white px-8 py-10 shadow-[var(--shadow-card)]">
-              <p className="mb-4 text-[13px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
-                Лицевая сторона
+          {!flipped ? (
+            <>
+              <p className="mb-4 text-[12px] font-semibold uppercase tracking-[0.08em] text-text-tertiary">
+                Термин
               </p>
-              <p className="text-center text-[22px] font-semibold leading-snug tracking-[-0.02em] text-text-primary sm:text-[26px]">
-                {current.term}
+              <p className="w-full text-center text-[28px] font-semibold leading-snug tracking-[-0.02em] text-text-primary sm:text-[36px]">
+                {current.term || '—'}
               </p>
-            </div>
-            <div className="flashcard-face flashcard-back flex flex-col items-center justify-center rounded-[20px] border border-border bg-white px-8 py-10 shadow-[var(--shadow-card)]">
-              <p className="mb-4 text-[13px] font-medium uppercase tracking-[0.08em] text-text-tertiary">
-                Обратная сторона
+              <p className="mt-8 text-[13px] text-text-tertiary">Нажмите, чтобы открыть ответ</p>
+            </>
+          ) : (
+            <>
+              <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-text-tertiary">
+                Определение
               </p>
-              <p className="text-center text-[18px] leading-relaxed text-text-primary sm:text-[20px]">
-                {current.definition}
+              <p className="mb-4 line-clamp-2 text-center text-[15px] text-text-tertiary">{current.term}</p>
+              <p className="w-full text-center text-[22px] leading-relaxed text-text-primary sm:text-[26px]">
+                {current.definition || '—'}
               </p>
-            </div>
-          </div>
+            </>
+          )}
         </button>
 
-        {!finished && (
+        {!finished && flipped && (
           <div className="mb-6 w-full max-w-[640px]">
             <p className="mb-3 text-center text-[12px] font-medium text-text-secondary">
-              Оцените карточку
+              Насколько хорошо вспомнили?
             </p>
             <CardSrsChoiceButtons onRate={rate} />
           </div>
         )}
 
+        {!finished && !flipped && (
+          <p className="mb-6 text-[13px] text-text-tertiary">Сначала вспомните ответ, затем откройте карточку</p>
+        )}
+
         {finished && (
-          <div className="mb-6 rounded-[16px] border border-border bg-surface-subtle px-4 py-3 text-center text-[13px] text-text-secondary">
+          <div className="mb-6 rounded-[16px] bg-surface-subtle px-4 py-3 text-center text-[13px] text-text-secondary">
             Сессия завершена · оценено {ratedCount} карточек
           </div>
         )}
@@ -117,9 +126,8 @@ export function FlashcardStudy({ cards, accentColor, onRate }: FlashcardStudyPro
           <button
             type="button"
             onClick={handleShuffle}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-[13px] font-medium text-text-secondary transition-colors hover:border-[#d4d9e0] hover:text-text-primary"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-medium text-text-secondary transition-colors hover:bg-surface-subtle hover:text-text-primary"
           >
-            <Shuffle size={15} strokeWidth={1.75} />
             Перемешать
           </button>
         </div>

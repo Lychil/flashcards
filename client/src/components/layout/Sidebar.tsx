@@ -3,16 +3,15 @@ import {
   BookOpen,
   ChevronsLeft,
   ChevronsRight,
-  GraduationCap,
+  CreditCard,
+  Layers,
   LayoutDashboard,
   Map,
-  Settings,
   X,
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { closeSidebar, toggleSidebarCollapsed } from '../../store/slices/uiSlice'
-import { useGetCurrentUserQuery } from '../../store/api/modulesApi'
 
 interface NavItem {
   to: string
@@ -33,18 +32,19 @@ const navSections: NavSection[] = [
     items: [
       { to: '/', label: 'Главная', icon: LayoutDashboard, end: true },
       { to: '/library', label: 'Моя библиотека', icon: BookOpen },
+      { to: '/diagrams', label: 'Интерактивные диаграммы', icon: Map, badge: '12' },
     ],
   },
   {
     title: 'Контент',
     items: [
-      { to: '/diagrams', label: 'Интерактивные диаграммы', icon: Map, badge: '12' },
+      { to: '/collections', label: 'Подборки', icon: Layers, end: true },
     ],
   },
   {
-    title: 'Управление',
+    title: 'Аккаунт',
     items: [
-      { to: '/classes', label: 'Классы / Ученики', icon: GraduationCap, badge: '3' },
+      { to: '/subscription', label: 'Подписка', icon: CreditCard },
     ],
   },
 ]
@@ -59,7 +59,6 @@ interface SidebarProps {
 export function Sidebar({ mobile = false }: SidebarProps) {
   const dispatch = useAppDispatch()
   const collapsed = useAppSelector((state) => state.ui.sidebarCollapsed)
-  const { data: user } = useGetCurrentUserQuery()
 
   const isCollapsed = !mobile && collapsed
 
@@ -226,46 +225,6 @@ export function Sidebar({ mobile = false }: SidebarProps) {
           </div>
         ))}
       </nav>
-
-      {/* Footer */}
-      <div
-        className={[
-          'shrink-0 border-t border-border-subtle transition-all duration-300 ease-in-out',
-          isCollapsed ? 'px-2 py-4' : 'px-5 py-4',
-        ].join(' ')}
-      >
-        <div
-          className={[
-            'flex items-center transition-all duration-300 ease-in-out',
-            isCollapsed ? 'flex-col gap-2' : 'gap-3',
-          ].join(' ')}
-        >
-          <div
-            className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-[13px] font-medium text-text-secondary shrink-0"
-            title={isCollapsed ? (user?.name ?? 'Пользователь') : undefined}
-          >
-            {user?.name?.charAt(0) ?? 'А'}
-          </div>
-          <div
-            className={[
-              'flex-1 min-w-0 transition-all duration-300 ease-in-out overflow-hidden',
-              isCollapsed ? 'opacity-0 max-w-0 max-h-0' : 'opacity-100 max-w-full',
-            ].join(' ')}
-          >
-            <p className="text-[13px] font-medium text-text-primary truncate">
-              {user?.name ?? 'Пользователь'}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="p-1.5 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-surface-muted transition-colors shrink-0"
-            aria-label="Настройки"
-            title={isCollapsed ? 'Настройки' : undefined}
-          >
-            <Settings size={15} strokeWidth={1.5} />
-          </button>
-        </div>
-      </div>
     </aside>
   )
 }

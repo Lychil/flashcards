@@ -294,7 +294,7 @@ function ModeTileHint({
     <div
       role="tooltip"
       style={style}
-      className="pointer-events-none w-max max-w-[240px] rounded-xl bg-[#12151a] px-3 py-2.5 text-white shadow-lg"
+      className="pointer-events-none w-max max-w-[240px] rounded-xl bg-[#12151a] px-3 py-2.5 text-white"
     >
       <ul className="space-y-1.5">
         {categoryEmpty && (
@@ -330,7 +330,7 @@ function ModeTileBadge({
   return (
     <span
       className={[
-        'absolute top-1.5 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white/90 shadow-sm',
+        'absolute top-1.5 flex h-[22px] w-[22px] items-center justify-center rounded-full border border-border bg-white/90',
         position === 'left' ? 'left-1.5' : 'right-1.5',
         type === 'crown' ? 'text-[#C9920A]' : 'text-text-tertiary',
       ].join(' ')}

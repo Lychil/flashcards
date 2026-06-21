@@ -542,12 +542,12 @@ export function FallingBlocksGame({ cards, accentColor }: FallingBlocksGameProps
 
           <div
             className={[
-              'relative overflow-hidden rounded-[18px] border border-border bg-white p-2 shadow-[var(--shadow-card)] transition-shadow duration-300',
-              lineBurst ? 'shadow-[0_0_0_2px_rgba(107,201,167,0.35),var(--shadow-card)]' : '',
+              'relative overflow-hidden rounded-[18px] border border-border bg-white p-2 duration-300',
+              lineBurst ? 'ring-2 ring-[#6BC9A7]/35' : '',
             ].join(' ')}
           >
             <div
-              className="pointer-events-none absolute left-2 right-2 top-2 z-10 h-[3px] rounded-full bg-[#ef4444] shadow-[0_0_0_1px_rgba(239,68,68,0.25)]"
+              className="pointer-events-none absolute left-2 right-2 top-2 z-10 h-[3px] rounded-full bg-[#ef4444]"
               aria-hidden
             />
 
@@ -607,7 +607,7 @@ export function FallingBlocksGame({ cards, accentColor }: FallingBlocksGameProps
 
             {scorePop && (
               <div className="pointer-events-none absolute inset-x-0 top-1/3 z-20 flex justify-center">
-                <span className="animate-[blocks-score-pop_0.9s_ease-out_forwards] rounded-full bg-white/95 px-4 py-2 text-[18px] font-bold tabular-nums text-[#2d8a66] shadow-lg">
+                <span className="animate-[blocks-score-pop_0.9s_ease-out_forwards] rounded-full border border-border bg-white/95 px-4 py-2 text-[18px] font-bold tabular-nums text-[#2d8a66]">
                   +{scorePop.points}
                 </span>
               </div>

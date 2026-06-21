@@ -14,3 +14,7 @@ export const moduleGhostButtonClass =
 
 export const moduleTextButtonClass =
   'inline-flex cursor-pointer items-center gap-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary'
+
+export const MODULE_HEADER_ACTION_ICON_SIZE = 15
+export const MODULE_HEADER_ACTION_ICON_STROKE = 2
+export const moduleHeaderActionIconClass = 'size-[15px] shrink-0'

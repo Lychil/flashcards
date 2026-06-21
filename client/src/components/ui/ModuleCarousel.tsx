@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGetCurrentUserQuery } from '../../store/api/modulesApi'
 import type { Module } from '../../types/module'
+import { EmptyPlaceholder, LoadingPlaceholder } from './ContentPlaceholder'
 import { MODULE_CARD_HEIGHT, MODULE_CARD_WIDTH, ModuleCard } from './ModuleCard'
 
 interface ModuleCarouselProps {
@@ -88,29 +89,15 @@ export function ModuleCarousel({ modules, isLoading }: ModuleCarouselProps) {
   const arrowTop = (MODULE_CARD_HEIGHT - ARROW_SIZE) / 2
 
   if (isLoading) {
-    return (
-      <div className="flex gap-5 overflow-hidden">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            className="shrink-0 rounded-[22px] bg-surface-muted/80 animate-pulse"
-            style={{ width: MODULE_CARD_WIDTH, height: MODULE_CARD_HEIGHT }}
-          />
-        ))}
-      </div>
-    )
+    return <LoadingPlaceholder variant="carousel" />
   }
 
   if (!modules?.length) {
     return (
-      <div
-        className="flex items-center justify-center rounded-[22px] border border-dashed border-border"
-        style={{ height: MODULE_CARD_HEIGHT }}
-      >
-        <p className="text-[14px] text-text-secondary text-center px-6">
-          Пока нет недавних модулей
-        </p>
-      </div>
+      <EmptyPlaceholder
+        variant="carousel"
+        title="Пока нет недавних модулей"
+      />
     )
   }
 

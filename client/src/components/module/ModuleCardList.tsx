@@ -16,10 +16,12 @@ import { filterCardsByTab, getCardStats, matchesCardSearch } from '../../lib/car
 import { enrichFlashcards } from '../../lib/enrichFlashcards'
 import { getAccentForeground } from '../../lib/cardColor'
 import { speakText } from '../../lib/speakText'
-import type { SrsRating } from '../../types/srs'
 import type { CardFilter, Flashcard } from '../../types/flashcard'
+import type { SrsRating } from '../../types/srs'
 import { SearchBar } from '../ui/SearchBar'
+import { EmptyPlaceholder } from '../ui/ContentPlaceholder'
 import { Tooltip } from '../ui/Tooltip'
+import { CardSrsBadge } from './CardSrsBadge'
 import { CardSrsSelect } from './CardSrsSelect'
 import {
   moduleGhostButtonClass,
@@ -40,6 +42,32 @@ const FILTER_OPTIONS: { id: CardFilter; label: string }[] = [
 const ROW_GRID =
   'grid grid-cols-[1fr] gap-x-3 gap-y-2 sm:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1.2fr)_8.5rem_auto] sm:items-center sm:gap-x-4'
 
+const ROW_GRID_READONLY =
+  'grid grid-cols-[1fr] gap-x-3 gap-y-2 sm:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1.2fr)] sm:items-center sm:gap-x-4'
+
+const ROW_GRID_SRS_READONLY =
+  'grid grid-cols-[1fr] gap-x-3 gap-y-2 sm:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1.2fr)_8.5rem] sm:items-center sm:gap-x-4'
+
+const HEADER_GRID = 'hidden px-4 sm:grid sm:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1.2fr)_8.5rem_auto] sm:gap-x-4'
+
+const HEADER_GRID_SRS_READONLY =
+  'hidden px-4 sm:grid sm:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1.2fr)_8.5rem] sm:gap-x-4'
+
+const HEADER_GRID_READONLY =
+  'hidden px-4 sm:grid sm:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1.2fr)] sm:gap-x-4'
+
+function getRowGrid(readOnly: boolean, showSrs: boolean) {
+  if (!readOnly) return ROW_GRID
+  if (showSrs) return ROW_GRID_SRS_READONLY
+  return ROW_GRID_READONLY
+}
+
+function getHeaderGrid(readOnly: boolean, showSrs: boolean) {
+  if (!readOnly) return HEADER_GRID
+  if (showSrs) return HEADER_GRID_SRS_READONLY
+  return HEADER_GRID_READONLY
+}
+
 type SortField = 'term' | 'definition'
 type SortDir = 'asc' | 'desc'
 
@@ -51,7 +79,10 @@ interface ModuleCardListProps {
   onAdd: (card: Omit<Flashcard, 'id'>) => void
   onUpdate: (id: string, patch: Partial<Omit<Flashcard, 'id'>>) => void
   onDelete: (ids: string[]) => void
-  onRate: (cardId: string, rating: SrsRating) => void
+  readOnly?: boolean
+  showSrs?: boolean
+  canSetSrsStatus?: boolean
+  onRate?: (cardId: string, rating: SrsRating) => void
   className?: string
 }
 
@@ -63,9 +94,13 @@ export function ModuleCardList({
   onAdd,
   onUpdate,
   onDelete,
+  readOnly = false,
+  showSrs: showSrsProp,
+  canSetSrsStatus = false,
   onRate,
   className = '',
 }: ModuleCardListProps) {
+  const showSrs = showSrsProp ?? !readOnly
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [sortField, setSortField] = useState<SortField>('term')
@@ -87,7 +122,7 @@ export function ModuleCardList({
   }, [enriched])
 
   const filtered = useMemo(() => {
-    const byTab = filterCardsByTab(enriched, filter)
+    const byTab = showSrs ? filterCardsByTab(enriched, filter) : enriched
 
     const searched = byTab.filter((card) => matchesCardSearch(card, search))
 
@@ -97,7 +132,7 @@ export function ModuleCardList({
       const cmp = left.localeCompare(right, 'ru', { sensitivity: 'base' })
       return sortDir === 'asc' ? cmp : -cmp
     })
-  }, [enriched, filter, search, sortField, sortDir])
+  }, [enriched, filter, search, sortField, sortDir, showSrs])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages - 1)
@@ -171,56 +206,62 @@ export function ModuleCardList({
           />
         </div>
 
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-1.5">
-            {FILTER_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => handleFilterChange(option.id)}
-                className={[
-                  'cursor-pointer rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-opacity hover:opacity-90',
-                  filter !== option.id &&
-                    'bg-surface-subtle text-text-secondary hover:bg-surface-muted hover:text-text-primary hover:opacity-100',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                style={filter === option.id ? accentButtonStyle : undefined}
-              >
-                {option.label} ({filterCounts[option.id]})
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (showAddForm && !editingId) {
-                resetForm()
-              } else {
-                setEditingId(null)
-                setTerm('')
-                setDefinition('')
-                setShowAddForm((v) => !v)
-              }
-            }}
-            className={showAddForm && !editingId ? moduleGhostButtonClass : primaryButtonClass}
-            style={showAddForm && !editingId ? undefined : accentButtonStyle}
-          >
-            {showAddForm && !editingId ? (
-              <>
-                <X size={15} strokeWidth={2} />
-                Отмена
-              </>
-            ) : (
-              <>
-                <Plus size={15} strokeWidth={2} />
-                Добавить
-              </>
+        {(showSrs || !readOnly) && (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            {showSrs && (
+              <div className="flex flex-wrap gap-1.5">
+                {FILTER_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => handleFilterChange(option.id)}
+                    className={[
+                      'cursor-pointer rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-opacity hover:opacity-90',
+                      filter !== option.id &&
+                        'bg-surface-subtle text-text-secondary hover:bg-surface-muted hover:text-text-primary hover:opacity-100',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    style={filter === option.id ? accentButtonStyle : undefined}
+                  >
+                    {option.label} ({filterCounts[option.id]})
+                  </button>
+                ))}
+              </div>
             )}
-          </button>
-        </div>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (showAddForm && !editingId) {
+                    resetForm()
+                  } else {
+                    setEditingId(null)
+                    setTerm('')
+                    setDefinition('')
+                    setShowAddForm((v) => !v)
+                  }
+                }}
+                className={showAddForm && !editingId ? moduleGhostButtonClass : primaryButtonClass}
+                style={showAddForm && !editingId ? undefined : accentButtonStyle}
+              >
+                {showAddForm && !editingId ? (
+                  <>
+                    <X size={15} strokeWidth={2} />
+                    Отмена
+                  </>
+                ) : (
+                  <>
+                    <Plus size={15} strokeWidth={2} />
+                    Добавить
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
 
-        {showAddForm && (
+        {!readOnly && showAddForm && (
           <form onSubmit={handleSubmit} className="mb-5 space-y-4 rounded-2xl bg-surface-subtle p-4">
             <p className={moduleLabelClass}>{editingId ? 'Редактировать' : 'Новая карточка'}</p>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -272,22 +313,22 @@ export function ModuleCardList({
       </div>
 
       {cards.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
-          <p className="text-[16px] font-semibold text-text-primary">Карточек пока нет</p>
-          <p className="mt-1 text-[14px] font-medium text-text-secondary">
-            Нажмите «Добавить», чтобы создать первую
-          </p>
-        </div>
+        <EmptyPlaceholder
+          variant="inline"
+          title="Карточек пока нет"
+          description={
+            readOnly ? undefined : 'Нажмите «Добавить», чтобы создать первую'
+          }
+        />
       ) : filtered.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
-          <p className="text-[16px] font-semibold text-text-primary">Ничего не найдено</p>
-          <p className="mt-1 text-[14px] font-medium text-text-secondary">
-            Измените запрос или фильтр
-          </p>
-        </div>
+        <EmptyPlaceholder
+          variant="inline"
+          title="Ничего не найдено"
+          description={showSrs ? 'Измените запрос или фильтр' : 'Измените запрос'}
+        />
       ) : (
         <>
-          <div className="relative z-0 mb-2 hidden px-4 sm:grid sm:grid-cols-[2rem_minmax(0,1fr)_minmax(0,1.2fr)_8.5rem_auto] sm:gap-x-4">
+          <div className={`relative z-0 mb-2 ${getHeaderGrid(readOnly, showSrs)}`}>
             <span className={moduleLabelClass}>#</span>
             <SortHeader
               label="Лицевая сторона"
@@ -301,8 +342,8 @@ export function ModuleCardList({
               dir={sortDir}
               onClick={() => toggleSort('definition')}
             />
-            <span className={moduleLabelClass}>Статус</span>
-            <span className={`${moduleLabelClass} text-right`}>Действия</span>
+            {showSrs && <span className={moduleLabelClass}>Статус</span>}
+            {!readOnly && <span className={`${moduleLabelClass} text-right`}>Действия</span>}
           </div>
 
           <ul className="space-y-1 pb-2">
@@ -314,7 +355,7 @@ export function ModuleCardList({
                   key={card.id}
                   className="group rounded-2xl px-3 py-3.5 transition-colors hover:bg-surface-subtle sm:px-4"
                 >
-                  <div className={ROW_GRID}>
+                  <div className={getRowGrid(readOnly, showSrs)}>
                     <span className="hidden text-[13px] font-semibold tabular-nums text-text-tertiary sm:block">
                       {rowNumber}
                     </span>
@@ -346,16 +387,35 @@ export function ModuleCardList({
                       {card.definition}
                     </p>
 
-                    <CardSrsSelect card={card} onRate={onRate} className="sm:justify-self-start" />
+                    {card.sourceRef && (
+                      <p
+                        className={[
+                          'col-span-full mt-1 line-clamp-1 text-[12px] text-text-tertiary',
+                          readOnly || !showSrs ? 'sm:col-span-2' : 'sm:col-span-3',
+                        ].join(' ')}
+                        title={card.sourceRef.excerpt}
+                      >
+                        Источник: «{card.sourceRef.excerpt}»
+                      </p>
+                    )}
 
-                    <div className="flex items-center gap-0.5 opacity-40 transition-opacity group-hover:opacity-100 sm:justify-end">
-                      <IconAction label="Редактировать" onClick={() => startEdit(card)}>
-                        <Pencil size={15} strokeWidth={2} />
-                      </IconAction>
-                      <IconAction label="Удалить" onClick={() => onDelete([card.id])} danger>
-                        <Trash2 size={15} strokeWidth={2} />
-                      </IconAction>
-                    </div>
+                    {showSrs &&
+                      (canSetSrsStatus && onRate ? (
+                        <CardSrsSelect card={card} onRate={onRate} className="sm:justify-self-start" />
+                      ) : (
+                        <CardSrsBadge card={card} className="sm:justify-self-start" />
+                      ))}
+
+                    {!readOnly && (
+                      <div className="flex items-center gap-0.5 opacity-40 transition-opacity group-hover:opacity-100 sm:justify-end">
+                        <IconAction label="Редактировать" onClick={() => startEdit(card)}>
+                          <Pencil size={15} strokeWidth={2} />
+                        </IconAction>
+                        <IconAction label="Удалить" onClick={() => onDelete([card.id])} danger>
+                          <Trash2 size={15} strokeWidth={2} />
+                        </IconAction>
+                      </div>
+                    )}
                   </div>
                 </li>
               )

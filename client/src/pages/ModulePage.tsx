@@ -3,22 +3,34 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { filterCardsByTab } from '../lib/cardFilter'
 import type { ImportMode, ParsedImportCard } from '../lib/moduleImportExport'
-import { enrichFlashcards } from '../lib/enrichFlashcards'
 import { getModuleStudyStats } from '../lib/moduleStudyStats'
+import { buildTodaySession } from '../lib/reviewQueue'
 import { getCardColorTheme, resolveModuleBaseColor } from '../lib/cardColor'
 import {
   loadModuleStudyActivity,
   recordCardReview,
 } from '../lib/moduleStudyActivity'
-import { applySrsRating, createDefaultSrs } from '../lib/spacedRepetition'
+import { recordStudyForPlan } from '../lib/planStudySync'
+import { getPlanRequestRetention } from '../lib/spacedRepetition'
+import { examPlanRepository } from '../services/examPlanRepository'
+import { useModuleCards } from '../hooks/useModuleCards'
+import {
+  canEditModuleContent,
+  canSetModuleSrsStatus,
+  canViewModuleSrs,
+  isModuleLinkedCopy,
+  isModuleOwner,
+} from '../lib/moduleAccess'
 import { PageLayout } from '../components/layout/PageLayout'
 import { PageBreadcrumbs } from '../components/layout/PageBreadcrumbs'
+import { EmptyPlaceholder, LoadingPlaceholder } from '../components/ui/ContentPlaceholder'
 import { ModuleCardList } from '../components/module/ModuleCardList'
 import {
   getModuleBreadcrumbItems,
   ModulePageHeader,
 } from '../components/module/ModulePageHeader'
 import { ModuleImportExport } from '../components/module/ModuleImportExport'
+import { ModuleCopyAction } from '../components/module/ModuleCopyAction'
 import { StudyModeGrid } from '../components/module/StudyModeGrid'
 import { StudyStats } from '../components/stats/StudyStats'
 import { AnagramGame } from '../components/module/study/AnagramGame'
@@ -31,7 +43,7 @@ import { FallingBlocksGame } from '../components/module/study/FallingBlocksGame'
 import { Toast } from '../components/ui/Toast'
 import { useGetCurrentUserQuery, useGetModuleQuery } from '../store/api/modulesApi'
 import type { CardFilter, Flashcard } from '../types/flashcard'
-import type { ModuleStudyActivity, SrsRating } from '../types/srs'
+import type { ModuleStudyActivity } from '../types/srs'
 import { isStudyModeId, type StudyModeId } from '../types/studyMode'
 
 const EMPTY_CATEGORY_MESSAGE = 'В этой категории нет карточек для запуска'
@@ -44,7 +56,26 @@ export function ModulePage() {
 
   const { data: currentUser } = useGetCurrentUserQuery()
   const { data, isLoading, isError } = useGetModuleQuery(id, { skip: !id })
-  const [cards, setCards] = useState<Flashcard[]>([])
+  const contentReadOnly = useMemo(
+    () => !(data?.module && canEditModuleContent(data.module, currentUser?.id)),
+    [data?.module, currentUser?.id],
+  )
+  const requestRetention = useMemo(() => {
+    const plan = examPlanRepository.load()
+    if (!plan?.moduleIds.includes(id)) return undefined
+    return getPlanRequestRetention(plan)
+  }, [id])
+  const {
+    cards,
+    rateCard: handleSrsRate,
+    addCard: handleAddCard,
+    updateCard: handleUpdateCard,
+    deleteCards: handleDeleteCards,
+    importCards,
+  } = useModuleCards(id, data?.flashcards, {
+    requestRetention,
+    contentReadOnly,
+  })
   const [cardFilter, setCardFilter] = useState<CardFilter>('all')
   const [studyCards, setStudyCards] = useState<Flashcard[]>([])
   const [studyActivity, setStudyActivity] = useState<ModuleStudyActivity>({ reviewsByDate: {} })
@@ -55,12 +86,6 @@ export function ModulePage() {
       setStudyActivity(loadModuleStudyActivity(id))
     }
   }, [id])
-
-  useEffect(() => {
-    if (data?.flashcards) {
-      setCards(enrichFlashcards(data.flashcards))
-    }
-  }, [data])
 
   const sessionCards = useMemo(
     () => filterCardsByTab(cards, cardFilter),
@@ -82,78 +107,66 @@ export function ModulePage() {
 
   const handleStudySelect = useCallback(
     (mode: StudyModeId) => {
-      if (sessionCards.length === 0) {
+      if (sessionCards.length === 0 && mode !== 'cards') {
         setToastMessage(EMPTY_CATEGORY_MESSAGE)
         return
       }
-      setStudyCards(sessionCards)
+
+      if (mode === 'cards' && data?.module) {
+        const mod = data.module
+        const session = buildTodaySession([mod], { [mod.id]: sessionCards })
+        if (session.totalDue === 0) {
+          setToastMessage('На сегодня созревших карточек нет — всё повторено')
+          return
+        }
+        setStudyCards(session.items.map((item) => item.card))
+      } else {
+        if (sessionCards.length === 0) {
+          setToastMessage(EMPTY_CATEGORY_MESSAGE)
+          return
+        }
+        setStudyCards(sessionCards)
+      }
+
       setActiveMode(mode)
     },
-    [sessionCards, setActiveMode],
+    [sessionCards, setActiveMode, data?.module],
   )
 
-  const handleSrsRate = useCallback(
-    (cardId: string, rating: SrsRating) => {
-      setCards((prev) =>
-        prev.map((card) => {
-          if (card.id !== cardId) return card
-          const srs = applySrsRating(card.srs ?? createDefaultSrs(), rating)
-          return { ...card, srs }
-        }),
-      )
+  const handleSrsRateWithActivity = useCallback(
+    (cardId: string, rating: import('../types/srs').SrsRating) => {
+      const card = cards.find((c) => c.id === cardId)
+      if (card && id) {
+        recordStudyForPlan({ moduleId: id, card })
+      }
+      handleSrsRate(cardId, rating)
       if (id) {
         setStudyActivity(recordCardReview(id))
       }
     },
-    [id],
+    [handleSrsRate, id, cards],
   )
 
-  const handleAddCard = (card: Omit<Flashcard, 'id'>) => {
-    setCards((prev) => [
-      ...prev,
-      { ...card, id: `local-${Date.now()}`, srs: card.srs ?? createDefaultSrs() },
-    ])
-  }
-
-  const handleUpdateCard = (cardId: string, patch: Partial<Omit<Flashcard, 'id'>>) => {
-    setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, ...patch } : c)))
-  }
-
-  const handleDeleteCards = (ids: string[]) => {
-    const idSet = new Set(ids)
-    setCards((prev) => prev.filter((c) => !idSet.has(c.id)))
-  }
-
-  const handleImportCards = useCallback((imported: ParsedImportCard[], mode: ImportMode) => {
-    const nextCards = imported.map((card, index) => ({
-      ...card,
-      id: `import-${Date.now()}-${index}`,
-      srs: createDefaultSrs(),
-    }))
-
-    setCards((prev) => (mode === 'replace' ? nextCards : [...prev, ...nextCards]))
-    setToastMessage(
-      mode === 'replace'
-        ? `Импортировано ${nextCards.length} карточек (замена)`
-        : `Добавлено ${nextCards.length} карточек`,
-    )
-  }, [])
+  const handleImportCards = useCallback(
+    (imported: ParsedImportCard[], mode: ImportMode) => {
+      const count = importCards(imported, mode)
+      setToastMessage(
+        mode === 'replace'
+          ? `Импортировано ${count} карточек (замена)`
+          : `Добавлено ${count} карточек`,
+      )
+    },
+    [importCards],
+  )
 
   if (isLoading) {
     return (
-      <PageLayout size="wide" className="max-w-none">
+      <PageLayout size="wide">
         <PageBreadcrumbs
           items={[{ label: 'Библиотека', to: '/library' }, { label: 'Модуль' }]}
           className="mb-5"
         />
-        <div className="mb-8 h-36 animate-pulse rounded-2xl bg-surface-muted" />
-        <div className="grid gap-8 xl:grid-cols-[70fr_30fr]">
-          <div className="space-y-6">
-            <div className="h-40 animate-pulse rounded-2xl bg-surface-muted" />
-            <div className="h-96 animate-pulse rounded-2xl bg-surface-muted" />
-          </div>
-          <div className="h-80 animate-pulse rounded-2xl bg-surface-muted" />
-        </div>
+        <LoadingPlaceholder variant="module-page" />
       </PageLayout>
     )
   }
@@ -165,18 +178,28 @@ export function ModulePage() {
           items={[{ label: 'Библиотека', to: '/library' }, { label: 'Модуль' }]}
           className="mb-4"
         />
-        <p className="text-[16px] font-bold text-text-primary">Модуль не найден</p>
-        <Link
-          to="/library"
-          className="mt-3 inline-block text-[14px] font-semibold text-[#6366f1] hover:underline"
-        >
-          Вернуться в библиотеку
-        </Link>
+        <EmptyPlaceholder
+          variant="inline"
+          title="Модуль не найден"
+          action={
+            <Link
+              to="/library"
+              className="text-[14px] font-semibold text-[#6366f1] hover:underline"
+            >
+              Вернуться в библиотеку
+            </Link>
+          }
+        />
       </PageLayout>
     )
   }
 
   const { module } = data
+  const isLinkedCopy = isModuleLinkedCopy(module)
+  const isOwner = isModuleOwner(module, currentUser?.id)
+  const canEditContent = canEditModuleContent(module, currentUser?.id)
+  const showSrs = canViewModuleSrs(module, currentUser?.id)
+  const canSetSrsStatus = canSetModuleSrsStatus(module, currentUser?.id)
   const moduleAccent = getCardColorTheme(resolveModuleBaseColor(module.id, module.color)).base
   const breadcrumbItems = getModuleBreadcrumbItems(module, activeMode)
   const activeStudyCards = studyCards.length > 0 ? studyCards : sessionCards
@@ -190,7 +213,7 @@ export function ModulePage() {
           <FlashcardStudy
             cards={activeStudyCards}
             accentColor={moduleAccent}
-            onRate={handleSrsRate}
+            onRate={handleSrsRateWithActivity}
           />
         )
       case 'test':
@@ -198,7 +221,7 @@ export function ModulePage() {
           <TestStudy
             cards={activeStudyCards}
             accentColor={moduleAccent}
-            onRate={handleSrsRate}
+            onRate={handleSrsRateWithActivity}
           />
         )
       case 'gaps':
@@ -210,7 +233,7 @@ export function ModulePage() {
           <AnagramGame
             cards={activeStudyCards}
             accentColor={moduleAccent}
-            onRate={handleSrsRate}
+            onRate={handleSrsRateWithActivity}
           />
         )
       case 'mnemo':
@@ -223,7 +246,7 @@ export function ModulePage() {
   }
 
   return (
-    <PageLayout size="wide" className="max-w-none">
+    <PageLayout size="wide">
       <PageBreadcrumbs items={breadcrumbItems} className="mb-5" />
 
       {activeMode ? (
@@ -239,7 +262,14 @@ export function ModulePage() {
           {renderStudyMode()}
         </>
       ) : (
-        <div className="grid grid-cols-1 items-start gap-8 xl:grid-cols-[70fr_30fr] xl:gap-12">
+        <div
+          className={[
+            'grid grid-cols-1 items-start gap-8',
+            isOwner && cards.length > 0 ? 'xl:grid-cols-[70fr_30fr] xl:gap-12' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           <div className="flex min-w-0 flex-col gap-8">
             <ModulePageHeader
               module={module}
@@ -247,11 +277,18 @@ export function ModulePage() {
               hideBreadcrumbs
               variant="compact"
               headerActions={
-                <ModuleImportExport
-                  moduleTitle={module.title}
-                  cards={cards}
-                  onImport={handleImportCards}
-                />
+                <>
+                  {!isLinkedCopy && !isOwner && currentUser && (
+                    <ModuleCopyAction sourceModuleId={module.sourceModuleId ?? module.id} />
+                  )}
+                  {canEditContent && (
+                    <ModuleImportExport
+                      moduleTitle={module.title}
+                      cards={cards}
+                      onImport={handleImportCards}
+                    />
+                  )}
+                </>
               }
             />
 
@@ -272,11 +309,14 @@ export function ModulePage() {
               onAdd={handleAddCard}
               onUpdate={handleUpdateCard}
               onDelete={handleDeleteCards}
+              readOnly={!canEditContent}
+              showSrs={showSrs}
+              canSetSrsStatus={canSetSrsStatus}
               onRate={handleSrsRate}
             />
           </div>
 
-          {cards.length > 0 && (
+          {isOwner && cards.length > 0 && (
             <aside className="min-w-0 border-t border-border pt-8 xl:sticky xl:top-0 xl:max-h-[calc(100dvh-3.5rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain xl:border-t-0 xl:pt-0">
               <StudyStats
                 layout="compact"
