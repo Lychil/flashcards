@@ -1,4 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { DiagramCard } from '../components/diagram/DiagramCard'
+import { DiagramFavoriteAction } from '../components/diagram/DiagramFavoriteAction'
+import { DiagramLibraryAction } from '../components/diagram/DiagramLibraryAction'
 import { GlobalCollectionTileGrid } from '../components/global/GlobalCollectionTile'
 import { GlobalModuleSection } from '../components/global/GlobalModuleSection'
 import { PageBreadcrumbs } from '../components/layout/PageBreadcrumbs'
@@ -8,11 +11,13 @@ import {
   buildGlobalModuleCollections,
   splitCollectionsForHome,
 } from '../lib/globalModules'
+import { mockDiagrams } from '../lib/mockDiagrams'
 import { useGetGlobalModulesQuery } from '../store/api/modulesApi'
 
 export function CollectionsPage() {
   const { data, isLoading } = useGetGlobalModulesQuery()
   const { modules = [], currentUserId = '' } = data ?? {}
+  const [, refreshDiagramActions] = useState(0)
 
   const collections = useMemo(
     () => buildGlobalModuleCollections(modules, currentUserId),
@@ -62,6 +67,35 @@ export function CollectionsPage() {
             collections={tracks}
             size="large"
           />
+
+          <section className="mb-12">
+            <div className="mb-5">
+              <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-text-primary">
+                Интерактивные диаграммы
+              </h2>
+              <p className="mt-1 text-[14px] text-text-secondary">
+                Визуальные подборки с изображениями и разметкой для повторения.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {mockDiagrams.map((diagram) => (
+                <div key={diagram.id} className="relative min-w-0">
+                  <DiagramCard diagram={diagram} />
+                  <div className="absolute left-5 top-5 z-20 flex gap-2">
+                    <DiagramLibraryAction
+                      diagramId={diagram.id}
+                      display="icon"
+                      onChange={() => refreshDiagramActions((version) => version + 1)}
+                    />
+                    <DiagramFavoriteAction
+                      diagramId={diagram.id}
+                      onChange={() => refreshDiagramActions((version) => version + 1)}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
 
           <GlobalCollectionTileGrid
             title="Ещё подборки"

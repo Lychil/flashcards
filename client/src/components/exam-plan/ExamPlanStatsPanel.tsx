@@ -148,6 +148,17 @@ export function ExamPlanStatsPanel({ forecast, className = '' }: ExamPlanStatsPa
     <div className={['w-full', className].filter(Boolean).join(' ')}>
       <p className={planLabelClass}>Готовность</p>
 
+      {forecast.isBehindSchedule && forecast.behindMessage && (
+        <div className="mt-3 rounded-2xl border border-[#F5B84C]/30 bg-[#F5B84C]/10 px-3.5 py-3">
+          <p className="text-[13px] font-semibold leading-snug text-[#9a6b12]">
+            Отставание от плана
+          </p>
+          <p className="mt-1 text-[12px] leading-snug text-[#8a6418]">
+            {forecast.behindMessage}
+          </p>
+        </div>
+      )}
+
       <div className="mt-3">
         <ReadinessBarChart metrics={metrics} />
       </div>

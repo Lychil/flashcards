@@ -2,10 +2,8 @@ import type { ExamPlanForecast } from '../../types/examPlan'
 import { pluralizeRu } from '../../lib/pluralizeRu'
 import { ExamPlanStatsPanel } from './ExamPlanStatsPanel'
 import {
-  PLAN_AMBER,
   PLAN_TARGET_PERCENT,
   planBodyClass,
-  planCaptionClass,
   planLabelClass,
   planMetricCardClass,
   planSectionTitleClass,
@@ -38,11 +36,6 @@ export function ExamPlanCountdownCard({ forecast }: { forecast: ExamPlanForecast
           </p>
         </div>
       </div>
-      {forecast.behindMessage && (
-        <p className={`mt-3 ${planCaptionClass}`} style={{ color: PLAN_AMBER }}>
-          {forecast.behindMessage}
-        </p>
-      )}
     </article>
   )
 }

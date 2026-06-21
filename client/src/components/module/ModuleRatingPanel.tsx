@@ -4,7 +4,7 @@ import {
   useGetModuleRatingsQuery,
   useRateModuleMutation,
 } from '../../store/api/modulesApi'
-import { moduleGhostButtonClass, moduleInteractiveClass } from './moduleStyles'
+import { moduleGhostButtonClass, moduleInteractiveClass, moduleHeaderActionIconClass, MODULE_HEADER_ACTION_ICON_SIZE, MODULE_HEADER_ACTION_ICON_STROKE } from './moduleStyles'
 
 interface ModuleRatingActionProps {
   moduleId: string
@@ -44,13 +44,18 @@ export function ModuleRatingAction({ moduleId }: ModuleRatingActionProps) {
         onClick={() => setOpen(true)}
         className={[
           moduleGhostButtonClass,
-          'rounded-xl border border-border bg-white px-3 py-2',
+          'h-9 rounded-xl border border-border bg-white px-3 py-2',
         ].join(' ')}
       >
         <Star
-          size={15}
-          strokeWidth={2}
-          className={userRating > 0 ? 'fill-[#F5B84C] text-[#F5B84C]' : undefined}
+          size={MODULE_HEADER_ACTION_ICON_SIZE}
+          strokeWidth={MODULE_HEADER_ACTION_ICON_STROKE}
+          className={[
+            moduleHeaderActionIconClass,
+            userRating > 0 ? 'fill-[#F5B84C] text-[#F5B84C]' : undefined,
+          ]
+            .filter(Boolean)
+            .join(' ')}
           aria-hidden
         />
         {userRating > 0 ? `Оценка: ${userRating}` : 'Оценить'}

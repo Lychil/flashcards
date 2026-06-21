@@ -27,12 +27,16 @@ export function useGlobalReviewQueue() {
     const cardsByModule: Record<string, import('../types/flashcard').Flashcard[]> = {}
 
     for (const mod of modules) {
-      if (mod.wordCount === 0) {
-        cardsByModule[mod.id] = loadAllModuleCards([mod.id], () => [])[mod.id] ?? []
-      } else {
-        const seed = getFlashcardsForModule(mod.id, mod.previewWords)
-        cardsByModule[mod.id] = loadAllModuleCards([mod.id], () => seed)[mod.id]
-      }
+      const contentId = mod.sourceModuleId ?? mod.id
+      const contentModule =
+        mod.sourceModuleId != null
+          ? mockModules.find((module) => module.id === mod.sourceModuleId) ?? mod
+          : mod
+      const seed =
+        contentModule.wordCount > 0
+          ? getFlashcardsForModule(contentId, contentModule.previewWords)
+          : []
+      cardsByModule[mod.id] = loadAllModuleCards([mod.id], () => seed)[mod.id]
     }
 
     const queue = buildReviewQueue(modules.filter((m) => (cardsByModule[m.id]?.length ?? 0) > 0), cardsByModule)
@@ -47,8 +51,15 @@ export function useAllModulesCards() {
     const cardsByModule: Record<string, import('../types/flashcard').Flashcard[]> = {}
 
     for (const mod of modules) {
+      const contentId = mod.sourceModuleId ?? mod.id
+      const contentModule =
+        mod.sourceModuleId != null
+          ? mockModules.find((module) => module.id === mod.sourceModuleId) ?? mod
+          : mod
       const seed =
-        mod.wordCount > 0 ? getFlashcardsForModule(mod.id, mod.previewWords) : []
+        contentModule.wordCount > 0
+          ? getFlashcardsForModule(contentId, contentModule.previewWords)
+          : []
       cardsByModule[mod.id] = loadAllModuleCards([mod.id], () => seed)[mod.id]
     }
 

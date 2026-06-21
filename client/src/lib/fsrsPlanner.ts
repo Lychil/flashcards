@@ -6,9 +6,9 @@ import type {
   PlanCalendarDay,
   PlanCalendarWeek,
   PlanDayEntry,
-  PlanDayStatus,
   ReadinessPoint,
 } from '../types/examPlan'
+import { DEFAULT_PLAN_TARGET_READINESS_PERCENT } from '../types/examPlan'
 import type { Module } from '../types/module'
 import { buildTodaySession } from './reviewQueue'
 import {
@@ -16,16 +16,27 @@ import {
   createDefaultSrs,
   DAILY_NEW_CARD_LIMIT,
   endOfDay,
-  fsrs,
+  getFsrsEngine,
+  getPlanRequestRetention,
   getRetrievability,
+  isFsrsCardDue,
   isNewCard,
   startOfDay,
-  TARGET_RETENTION,
   toFsrsCard,
 } from './fsrsEngine'
 import { Rating, State, type Card } from 'ts-fsrs'
+import type { FSRS } from 'ts-fsrs'
 
 const DAY_MS = 24 * 60 * 60 * 1000
+
+function resolvePlanTargetPercent(plan: ExamPlan): number {
+  const value = plan.targetReadinessPercent ?? DEFAULT_PLAN_TARGET_READINESS_PERCENT
+  return Math.min(100, Math.max(50, Math.round(value)))
+}
+
+function planTargetRetention(plan: ExamPlan): number {
+  return getPlanRequestRetention(plan)
+}
 
 export function toDateKey(date: Date | number = Date.now()): string {
   const d = typeof date === 'number' ? new Date(date) : date
@@ -81,11 +92,147 @@ interface ModuleInfo {
   title: string
 }
 
-function resolvePastStatus(planned: number, actual: number): PlanDayStatus {
-  if (planned === 0) return actual > 0 ? 'past-done' : 'past-missed'
-  if (actual >= planned) return 'past-done'
-  if (actual > 0) return 'past-partial'
-  return 'past-missed'
+function adaptiveNewCardsPerDay(newRemaining: number, daysLeft: number): number {
+  if (newRemaining <= 0) return 0
+  if (daysLeft <= 0) return Math.min(DAILY_NEW_CARD_LIMIT, newRemaining)
+  return Math.min(DAILY_NEW_CARD_LIMIT, Math.ceil(newRemaining / daysLeft))
+}
+
+function cloneSimFromCards(
+  plan: ExamPlan,
+  cardsByModule: Record<string, Flashcard[]>,
+  now: number,
+): SimCard[] {
+  const sim: SimCard[] = []
+  for (const modId of plan.moduleIds) {
+    for (const card of cardsByModule[modId] ?? []) {
+      sim.push({
+        cardId: card.id,
+        moduleId: modId,
+        fsrs: cloneFsrsCard(toFsrsCard(card.srs, now)),
+      })
+    }
+  }
+  return sim
+}
+
+function buildPastActualEntries(
+  plan: ExamPlan,
+  todayKey: string,
+): PlanDayEntry[] {
+  const planStartKey = toDateKey(plan.createdAt)
+  const pastKeys = enumerateDateKeys(planStartKey, todayKey).filter((k) => k < todayKey)
+  return pastKeys.map((dateKey) => {
+    const actualReviews = plan.dailyReviews[dateKey] ?? 0
+    const actualNew = plan.dailyNewCards[dateKey] ?? 0
+    const totalActual = actualReviews + actualNew
+
+    return {
+      date: dateKey,
+      plannedNew: actualNew,
+      plannedReviews: actualReviews,
+      actualNew,
+      actualReviews,
+      totalPlanned: totalActual,
+      totalActual,
+      status: 'past-done',
+      isOverloaded: false,
+      readinessPercent: 0,
+    }
+  })
+}
+
+function computeScheduleLag(params: {
+  allCards: Flashcard[]
+  todayLoad: number
+  dailyTarget: number
+  daysRemaining: number
+  elapsedPlanDays: number
+  totalPlanDays: number
+  predictedReadiness: number
+  targetReadiness: number
+}): {
+  isBehindSchedule: boolean
+  daysBehind?: number
+  extraCardsPerDay?: number
+  scheduleLagCards?: number
+  behindMessage?: string
+} {
+  const {
+    allCards,
+    todayLoad,
+    dailyTarget,
+    daysRemaining,
+    elapsedPlanDays,
+    totalPlanDays,
+    predictedReadiness,
+    targetReadiness,
+  } = params
+  const introducedCards = allCards.filter((card) => !isNewCard(card)).length
+  const expectedIntroduced =
+    totalPlanDays > 0
+      ? Math.floor((allCards.length * Math.min(elapsedPlanDays, totalPlanDays)) / totalPlanDays)
+      : allCards.length
+  const newLag = Math.max(0, expectedIntroduced - introducedCards)
+  const overloadLag = Math.max(0, todayLoad - dailyTarget)
+  const readinessLagCards = Math.ceil(
+    (allCards.length * Math.max(0, targetReadiness - predictedReadiness)) / 100,
+  )
+  const scheduleLagCards = Math.max(newLag, readinessLagCards) + overloadLag
+
+  if (scheduleLagCards <= 0) {
+    return { isBehindSchedule: false }
+  }
+
+  const safeDailyTarget = Math.max(1, dailyTarget)
+  const daysBehind = Math.max(1, Math.ceil(scheduleLagCards / safeDailyTarget))
+  const extraCardsPerDay =
+    daysRemaining > 0 ? Math.ceil(scheduleLagCards / daysRemaining) : scheduleLagCards
+
+  return {
+    isBehindSchedule: true,
+    daysBehind,
+    extraCardsPerDay,
+    scheduleLagCards,
+    behindMessage: formatBehindMessage(daysBehind, scheduleLagCards, extraCardsPerDay),
+  }
+}
+
+function getDueSimCards(sim: SimCard[], at: Date): SimCard[] {
+  const ts = at.getTime()
+  return sim
+    .filter((s) => isFsrsCardDue(s.fsrs, ts))
+    .sort((a, b) => a.fsrs.due.getTime() - b.fsrs.due.getTime())
+}
+
+function applySimReviews(sim: SimCard[], due: SimCard[], at: Date, count: number, engine: FSRS) {
+  const toReview = due.slice(0, count)
+  for (const item of toReview) {
+    const idx = sim.findIndex((s) => s.cardId === item.cardId)
+    if (idx < 0) continue
+    sim[idx].fsrs = engine.next(sim[idx].fsrs, at, Rating.Good).card
+  }
+}
+
+function applySimNew(sim: SimCard[], newItems: SimCard[], at: Date, count: number, engine: FSRS) {
+  let introduced = 0
+  for (const item of newItems) {
+    if (introduced >= count) break
+    const idx = sim.findIndex((s) => s.cardId === item.cardId)
+    if (idx < 0 || sim[idx].fsrs.state !== State.New) continue
+    sim[idx].fsrs = engine.next(sim[idx].fsrs, at, Rating.Good).card
+    introduced += 1
+  }
+}
+
+function computeReadinessAt(sim: SimCard[], at: Date, totalCards: number, engine: FSRS): number {
+  if (totalCards === 0) return 100
+  let sum = 0
+  for (const s of sim) {
+    if (s.fsrs.state === State.New) continue
+    sum += engine.get_retrievability(s.fsrs, at, false)
+  }
+  return Math.round((sum / totalCards) * 100)
 }
 
 function pluralizeCardsShort(count: number): string {
@@ -98,38 +245,18 @@ function pluralizeCardsShort(count: number): string {
   return 'карточек'
 }
 
-function getDueSimCards(sim: SimCard[], dayEnd: Date): SimCard[] {
-  const ts = dayEnd.getTime()
-  return sim.filter((s) => s.fsrs.state !== State.New && s.fsrs.due.getTime() <= ts)
+function pluralizeDaysShort(count: number): string {
+  const abs = Math.abs(count)
+  const mod100 = abs % 100
+  const mod10 = abs % 10
+  if (mod100 >= 11 && mod100 <= 14) return 'дней'
+  if (mod10 === 1) return 'день'
+  if (mod10 >= 2 && mod10 <= 4) return 'дня'
+  return 'дней'
 }
 
-function applySimReviews(sim: SimCard[], due: SimCard[], at: Date, count: number) {
-  const toReview = due.slice(0, count)
-  for (const item of toReview) {
-    const idx = sim.indexOf(item)
-    sim[idx].fsrs = fsrs.next(item.fsrs, at, Rating.Good).card
-  }
-}
-
-function applySimNew(sim: SimCard[], newItems: SimCard[], at: Date, count: number) {
-  let introduced = 0
-  for (const item of newItems) {
-    if (introduced >= count) break
-    if (item.fsrs.state !== State.New) continue
-    const idx = sim.indexOf(item)
-    sim[idx].fsrs = fsrs.next(item.fsrs, at, Rating.Good).card
-    introduced += 1
-  }
-}
-
-function computeReadinessAt(sim: SimCard[], at: Date, totalCards: number): number {
-  if (totalCards === 0) return 100
-  let sum = 0
-  for (const s of sim) {
-    if (s.fsrs.state === State.New) continue
-    sum += fsrs.get_retrievability(s.fsrs, at, false)
-  }
-  return Math.round((sum / totalCards) * 100)
+function formatBehindMessage(daysBehind: number, lagCards: number, extraPerDay: number): string {
+  return `Отставание примерно ${daysBehind} ${pluralizeDaysShort(daysBehind)}: ${lagCards} ${pluralizeCardsShort(lagCards)} сверх текущего темпа. Чтобы вернуться к цели, добавьте +${extraPerDay} ${pluralizeCardsShort(extraPerDay)} в день.`
 }
 
 function buildModuleBreakdown(
@@ -172,84 +299,48 @@ export function buildExamPlanSchedule(
 ): ExamPlanSchedule {
   const moduleMap = new Map(modules.map((m) => [m.id, { id: m.id, title: m.title }]))
   const allCards = plan.moduleIds.flatMap((id) => cardsByModule[id] ?? [])
-
-  const sim: SimCard[] = []
-  for (const modId of plan.moduleIds) {
-    for (const card of cardsByModule[modId] ?? []) {
-      sim.push({
-        cardId: card.id,
-        moduleId: modId,
-        fsrs: cloneFsrsCard(toFsrsCard(card.srs, now)),
-      })
-    }
-  }
-
   const totalCards = allCards.length
   const todayKey = toDateKey(now)
   const examKey = normalizeExamDateForPlan(plan.examDate, plan.createdAt)
-  const planStartKey = toDateKey(plan.createdAt)
-  const scheduleFromKey = planStartKey
-  const studyDayKeys = enumerateDateKeys(scheduleFromKey, examKey).filter((k) => k < examKey)
   const daysRemaining = daysBetween(parseDateKey(todayKey), parseDateKey(examKey))
+  const planFsrs = getFsrsEngine(getPlanRequestRetention(plan))
+  const targetPercent = resolvePlanTargetPercent(plan)
+  const targetRetention = planTargetRetention(plan)
 
-  const newQueue = sim.filter((s) => s.fsrs.state === State.New)
-  const baseNewPerDay = Math.min(
-    DAILY_NEW_CARD_LIMIT,
-    daysRemaining > 0 ? Math.ceil(newQueue.length / daysRemaining) : newQueue.length,
-  )
+  const pastEntries = buildPastActualEntries(plan, todayKey)
 
-  let reviewBacklog = 0
-  let newBacklog = 0
-  const entries: PlanDayEntry[] = []
+  const forwardSim = cloneSimFromCards(plan, cardsByModule, now)
+  const forwardKeys = enumerateDateKeys(todayKey, examKey).filter((k) => k < examKey)
+  const forwardEntries: PlanDayEntry[] = []
   const readinessCurve: ReadinessPoint[] = []
 
-  const currentReadiness = computeReadinessAt(sim, new Date(now), totalCards)
+  const currentReadiness = computeReadinessAt(forwardSim, new Date(now), totalCards, planFsrs)
   readinessCurve.push({ date: todayKey, percent: currentReadiness, isAdjusted: false })
 
-  for (const dateKey of studyDayKeys) {
-    const isPast = dateKey < todayKey
+  for (const dateKey of forwardKeys) {
     const isToday = dateKey === todayKey
     const dayStart = startOfDay(parseDateKey(dateKey))
     const dayEnd = endOfDay(parseDateKey(dateKey))
+    const daysLeft = daysBetween(parseDateKey(dateKey), parseDateKey(examKey))
+    const newRemaining = forwardSim.filter((s) => s.fsrs.state === State.New).length
+    const plannedNew = adaptiveNewCardsPerDay(newRemaining, daysLeft)
 
-    const dueCards = getDueSimCards(sim, dayEnd)
-    const fsrsReviews = dueCards.length + reviewBacklog
-    const fsrsNew = Math.min(baseNewPerDay + newBacklog, newQueue.filter((s) => s.fsrs.state === State.New).length)
-
-    const plannedReviews = fsrsReviews
-    const plannedNew = fsrsNew
+    const dueCards = getDueSimCards(forwardSim, dayEnd)
+    const plannedReviews = dueCards.length
     const totalPlanned = plannedReviews + plannedNew
 
-    const actualReviews = plan.dailyReviews[dateKey] ?? 0
-    const actualNew = plan.dailyNewCards[dateKey] ?? 0
+    const actualReviews = isToday ? (plan.dailyReviews[dateKey] ?? 0) : 0
+    const actualNew = isToday ? (plan.dailyNewCards[dateKey] ?? 0) : 0
     const totalActual = actualReviews + actualNew
 
-    let status: PlanDayStatus = isToday ? 'today' : isPast ? resolvePastStatus(totalPlanned, totalActual) : 'future'
+    const moduleBreakdown = buildModuleBreakdown(dueCards, plannedNew, forwardSim, moduleMap)
 
-    const moduleBreakdown = buildModuleBreakdown(
-      dueCards,
-      plannedNew,
-      newQueue,
-      moduleMap,
-    )
+    applySimReviews(forwardSim, dueCards, dayEnd, plannedReviews, planFsrs)
+    applySimNew(forwardSim, forwardSim, dayStart, plannedNew, planFsrs)
 
-    if (isPast) {
-      const reviewShortfall = Math.max(0, plannedReviews - actualReviews)
-      const newShortfall = Math.max(0, plannedNew - actualNew)
-      reviewBacklog += reviewShortfall
-      newBacklog += newShortfall
-      applySimReviews(sim, dueCards, dayEnd, actualReviews)
-      applySimNew(sim, newQueue, dayStart, actualNew)
-    } else {
-      applySimReviews(sim, dueCards, dayEnd, plannedReviews)
-      applySimNew(sim, newQueue, dayStart, plannedNew)
-      reviewBacklog = 0
-      newBacklog = 0
-    }
+    const readinessPercent = computeReadinessAt(forwardSim, dayEnd, totalCards, planFsrs)
 
-    const readinessPercent = computeReadinessAt(sim, dayEnd, totalCards)
-
-    entries.push({
+    forwardEntries.push({
       date: dateKey,
       plannedNew,
       plannedReviews,
@@ -257,16 +348,16 @@ export function buildExamPlanSchedule(
       actualReviews,
       totalPlanned,
       totalActual,
-      status,
-      isOverloaded: (reviewBacklog > 0 || newBacklog > 0) && !isPast,
+      status: isToday ? 'today' : 'future',
+      isOverloaded: false,
       readinessPercent,
       moduleBreakdown,
     })
 
-    if (!isPast) {
-      readinessCurve.push({ date: dateKey, percent: readinessPercent, isAdjusted: false })
-    }
+    readinessCurve.push({ date: dateKey, percent: readinessPercent, isAdjusted: false })
   }
+
+  const entries = [...pastEntries, ...forwardEntries]
 
   if (examKey >= todayKey) {
     entries.push({
@@ -279,12 +370,16 @@ export function buildExamPlanSchedule(
       totalActual: 0,
       status: 'exam',
       isOverloaded: false,
-      readinessPercent: computeReadinessAt(sim, endOfDay(parseDateKey(examKey)), totalCards),
+      readinessPercent: computeReadinessAt(
+        forwardSim,
+        endOfDay(parseDateKey(examKey)),
+        totalCards,
+        planFsrs,
+      ),
     })
   }
 
-  const daysWithCarryover = applyCarryover(entries)
-  let todayEntry = daysWithCarryover.find((d) => d.status === 'today') ?? null
+  let todayEntry = forwardEntries.find((d) => d.status === 'today') ?? null
 
   const planModules = modules.filter((m) => plan.moduleIds.includes(m.id))
   const todaySession = buildTodaySession(planModules, cardsByModule, {
@@ -294,75 +389,77 @@ export function buildExamPlanSchedule(
   })
 
   if (todayEntry) {
-    const carry = todayEntry.carryoverFromYesterday ?? 0
     todayEntry = {
       ...todayEntry,
-      plannedReviews: todaySession.reviewCount + carry,
-      plannedNew: todaySession.newCount,
-      totalPlanned: todaySession.reviewCount + carry + todaySession.newCount,
+      remainingNew: todaySession.newCount,
+      remainingReviews: todaySession.reviewCount,
+      totalPlanned: todayEntry.plannedReviews + todayEntry.plannedNew,
     }
-    const idx = daysWithCarryover.findIndex((d) => d.status === 'today')
-    if (idx >= 0) daysWithCarryover[idx] = todayEntry
+    const idx = entries.findIndex((d) => d.status === 'today')
+    if (idx >= 0) entries[idx] = todayEntry
   }
 
-  const finalTodayLoad = todaySession.totalDue + (todayEntry?.carryoverFromYesterday ?? 0)
+  const finalTodayLoad = todaySession.totalDue
+  const predictedReadiness =
+    entries.find((d) => d.status === 'exam')?.readinessPercent ??
+    computeReadinessAt(forwardSim, endOfDay(parseDateKey(examKey)), totalCards, planFsrs)
 
-  const examInstant = endOfDay(parseDateKey(examKey))
-  const predictedReadiness = computeReadinessAt(sim, examInstant, totalCards)
-
-  const masteredCards = allCards.filter((c) => getRetrievability(c, now) >= TARGET_RETENTION).length
-  let behindMessage: string | undefined
-  let extraCardsPerDay: number | undefined
-  let isBehindSchedule = false
-  let daysBehind = 0
-
-  const missedPast = daysWithCarryover.filter((d) => d.status === 'past-missed' || d.status === 'past-partial').length
-  daysBehind = missedPast
-
-  const todayDone = (plan.dailyReviews[todayKey] ?? 0) + (plan.dailyNewCards[todayKey] ?? 0)
-  if (todayDone < finalTodayLoad && finalTodayLoad > 0) {
-    extraCardsPerDay = finalTodayLoad - todayDone
-    isBehindSchedule = true
-    daysBehind = Math.max(daysBehind, 1)
-    behindMessage = formatBehindMessage(daysBehind, extraCardsPerDay, predictedReadiness)
-  } else if (reviewBacklog > 0 || newBacklog > 0) {
-    isBehindSchedule = true
-    extraCardsPerDay = reviewBacklog + newBacklog
-    behindMessage = formatBehindMessage(Math.max(daysBehind, 1), extraCardsPerDay, predictedReadiness)
-  }
+  const masteredCards = allCards.filter(
+    (c) => getRetrievability(c, now, targetRetention) >= targetRetention,
+  ).length
+  const totalPlanDays = Math.max(
+    1,
+    daysBetween(parseDateKey(toDateKey(plan.createdAt)), parseDateKey(examKey)),
+  )
+  const elapsedPlanDays = daysBetween(parseDateKey(toDateKey(plan.createdAt)), parseDateKey(todayKey))
+  const dailyTarget = Math.max(
+    1,
+    (todayEntry?.plannedNew ?? 0) + (todayEntry?.plannedReviews ?? 0),
+  )
+  const lag = computeScheduleLag({
+    allCards,
+    todayLoad: finalTodayLoad,
+    dailyTarget,
+    daysRemaining,
+    elapsedPlanDays,
+    totalPlanDays,
+    predictedReadiness,
+    targetReadiness: targetPercent,
+  })
 
   const forecast: ExamPlanForecast = {
     predictedReadinessPercent: predictedReadiness,
     currentReadinessPercent: currentReadiness,
-    targetReadinessPercent: Math.round(TARGET_RETENTION * 100),
+    targetReadinessPercent: targetPercent,
     daysRemaining,
     totalCards,
     masteredCards,
     dueToday: todaySession.reviewCount,
     newRemaining: allCards.filter(isNewCard).length,
     dailyPlan: {
-      newCardsPerDay: todaySession.newCount,
-      reviewsPerDay: todaySession.reviewCount,
+      newCardsPerDay: todayEntry?.plannedNew ?? todaySession.newCount,
+      reviewsPerDay: todayEntry?.plannedReviews ?? todaySession.reviewCount,
     },
-    isBehindSchedule,
-    behindMessage,
-    extraCardsPerDay,
-    daysBehind: daysBehind > 0 ? daysBehind : undefined,
+    isBehindSchedule: lag.isBehindSchedule,
+    behindMessage: lag.behindMessage,
+    extraCardsPerDay: lag.extraCardsPerDay,
+    daysBehind: lag.daysBehind,
+    scheduleLagCards: lag.scheduleLagCards,
     todayLoad: finalTodayLoad,
   }
 
-  if (daysWithCarryover.some((d) => d.status === 'exam')) {
+  if (entries.some((d) => d.status === 'exam')) {
     readinessCurve.push({
       date: examKey,
       percent: predictedReadiness,
-      isAdjusted: isBehindSchedule,
+      isAdjusted: lag.isBehindSchedule,
     })
   }
 
-  const weeks = buildPlanCalendarWeeks(daysWithCarryover, todayKey, examKey)
+  const weeks = buildPlanCalendarWeeks(entries, todayKey, examKey)
 
   return {
-    days: daysWithCarryover,
+    days: entries,
     todayEntry,
     todayLoad: finalTodayLoad,
     forecast,
@@ -371,31 +468,6 @@ export function buildExamPlanSchedule(
     calendarFrom: todayKey,
     calendarTo: examKey,
   }
-}
-
-function applyCarryover(entries: PlanDayEntry[]): PlanDayEntry[] {
-  return entries.map((entry, index) => {
-    if (entry.status !== 'today' || index === 0) return entry
-    const prev = entries[index - 1]
-    if (prev.status === 'past-missed' || prev.status === 'past-partial') {
-      const shortfall = Math.max(0, prev.totalPlanned - prev.totalActual)
-      if (shortfall > 0) {
-        return {
-          ...entry,
-          carryoverFromYesterday: shortfall,
-          plannedReviews: entry.plannedReviews + shortfall,
-          totalPlanned: entry.totalPlanned + shortfall,
-        }
-      }
-    }
-    return entry
-  })
-}
-
-function formatBehindMessage(daysBehind: number, extraPerDay: number, readiness: number): string {
-  const dayWord =
-    daysBehind === 1 ? '1 день' : daysBehind < 5 ? `${daysBehind} дня` : `${daysBehind} дней`
-  return `Отстаёшь от плана на ${dayWord} — чтобы успеть к цели, нужно +${extraPerDay} ${pluralizeCardsShort(extraPerDay)} в день (прогноз ${readiness}%)`
 }
 
 export function listCalendarMonths(fromKey: string, toKey: string): { year: number; month: number }[] {
@@ -516,6 +588,7 @@ export function createDefaultExamPlan(moduleIds: string[], examDate: string): Ex
     createdAt: Date.now(),
     dailyReviews: {},
     dailyNewCards: {},
+    targetReadinessPercent: DEFAULT_PLAN_TARGET_READINESS_PERCENT,
   }
 }
 

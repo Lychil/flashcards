@@ -24,7 +24,8 @@ export function useExamPlan(
       normalized.schemaVersion !== plan.schemaVersion ||
       normalized.isMock !== plan.isMock ||
       normalized.userConfirmed !== plan.userConfirmed ||
-      normalized.goalTitle !== plan.goalTitle
+      normalized.goalTitle !== plan.goalTitle ||
+      normalized.targetReadinessPercent !== plan.targetReadinessPercent
     ) {
       setPlan(normalized)
       return
@@ -42,28 +43,39 @@ export function useExamPlan(
     return null
   }, [schedule])
 
-  const setExamPlan = useCallback((examDate: string, moduleIds: string[], goalTitle: string) => {
-    const trimmedGoal = goalTitle.trim()
-    setPlan((prev) =>
-      prev
-        ? {
-            ...prev,
-            examDate,
-            moduleIds,
-            goalTitle: trimmedGoal,
-            isMock: false,
-            userConfirmed: true,
-            schemaVersion: EXAM_PLAN_SCHEMA_VERSION,
-          }
-        : {
-            ...createDefaultExamPlan(moduleIds, examDate),
-            goalTitle: trimmedGoal,
-            isMock: false,
-            userConfirmed: true,
-            schemaVersion: EXAM_PLAN_SCHEMA_VERSION,
-          },
-    )
-  }, [])
+  const setExamPlan = useCallback(
+    (
+      examDate: string,
+      moduleIds: string[],
+      goalTitle: string,
+      targetReadinessPercent: number,
+    ) => {
+      const trimmedGoal = goalTitle.trim()
+      const target = Math.min(100, Math.max(50, Math.round(targetReadinessPercent)))
+      setPlan((prev) =>
+        prev
+          ? {
+              ...prev,
+              examDate,
+              moduleIds,
+              goalTitle: trimmedGoal,
+              targetReadinessPercent: target,
+              isMock: false,
+              userConfirmed: true,
+              schemaVersion: EXAM_PLAN_SCHEMA_VERSION,
+            }
+          : {
+              ...createDefaultExamPlan(moduleIds, examDate),
+              goalTitle: trimmedGoal,
+              targetReadinessPercent: target,
+              isMock: false,
+              userConfirmed: true,
+              schemaVersion: EXAM_PLAN_SCHEMA_VERSION,
+            },
+      )
+    },
+    [],
+  )
 
   const updatePlan = useCallback((patch: Partial<ExamPlan>) => {
     setPlan((prev) => (prev ? { ...prev, ...patch } : prev))

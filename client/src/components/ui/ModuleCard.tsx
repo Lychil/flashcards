@@ -9,6 +9,7 @@ import {
 } from '../../store/api/modulesApi'
 import type { Module, ModuleAuthor } from '../../types/module'
 import { FolderShape } from './FolderShape'
+import { ModuleVisibilityBadge } from '../module/ModuleVisibilityBadge'
 
 export const MODULE_CARD_WIDTH = 208
 export const MODULE_PANEL_HEIGHT = 214
@@ -143,7 +144,7 @@ function ModuleSocialMetrics({
   if (rating <= 0 && favoriteCount <= 0) return null
 
   return (
-    <div className="absolute left-3 top-[20px] z-30 flex items-center gap-1.5">
+    <>
       {rating > 0 && (
         <span
           className="inline-flex items-center gap-1 rounded-full bg-black/18 py-1.5 pl-2 pr-2.5 backdrop-blur-sm ring-1 ring-inset ring-white/20"
@@ -166,7 +167,7 @@ function ModuleSocialMetrics({
           </span>
         </span>
       )}
-    </div>
+    </>
   )
 }
 
@@ -231,7 +232,10 @@ export function ModuleCard({ module, currentUserId, onClick }: ModuleCardProps) 
         >
           <FolderShape color={baseColor} />
 
-          <ModuleSocialMetrics rating={module.rating} favoriteCount={module.favoriteCount} />
+          <div className="absolute left-3 top-[20px] z-30 flex items-center gap-1.5">
+            <ModuleVisibilityBadge module={module} />
+            <ModuleSocialMetrics rating={module.rating} favoriteCount={module.favoriteCount} />
+          </div>
           <ModuleCardFooter
             author={module.author}
             currentUserId={currentUserId}

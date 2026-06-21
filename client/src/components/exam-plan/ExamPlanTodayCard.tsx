@@ -20,7 +20,9 @@ interface ExamPlanTodayCardProps {
 }
 
 export function ExamPlanTodayCard({ entry, moduleCount, flush = false }: ExamPlanTodayCardProps) {
-  const minutes = estimateStudyMinutes(entry.totalPlanned)
+  const newCount = entry.remainingNew ?? entry.plannedNew
+  const reviewCount = entry.remainingReviews ?? entry.plannedReviews
+  const minutes = estimateStudyMinutes(newCount + reviewCount)
 
   return (
     <div
@@ -34,23 +36,18 @@ export function ExamPlanTodayCard({ entry, moduleCount, flush = false }: ExamPla
         <p className="text-[18px] font-medium leading-snug text-text-primary">
           <span className="inline-flex items-center gap-1" title={LABELS.todayNew}>
             <Sparkles size={14} className="shrink-0 text-[#7F77DD]" aria-hidden />
-            {entry.plannedNew}{' '}
-            {pluralizeRu(entry.plannedNew, ['карточка', 'карточки', 'карточек'])}{' '}
+            {newCount}{' '}
+            {pluralizeRu(newCount, ['карточка', 'карточки', 'карточек'])}{' '}
             {PLAN_ICON_LABELS.firstStudyCount}
           </span>
           {' · '}
           <span className="inline-flex items-center gap-1" title={LABELS.todayReviews}>
             <RotateCcw size={14} className="shrink-0 text-[#5B9FD4]" aria-hidden />
-            {entry.plannedReviews}{' '}
-            {pluralizeRu(entry.plannedReviews, ['карточка', 'карточки', 'карточек'])}{' '}
+            {reviewCount}{' '}
+            {pluralizeRu(reviewCount, ['карточка', 'карточки', 'карточек'])}{' '}
             {PLAN_ICON_LABELS.reviewDueCount}
           </span>
         </p>
-        {entry.carryoverFromYesterday != null && entry.carryoverFromYesterday > 0 && (
-          <p className={planCaptionClass}>
-            (+{entry.carryoverFromYesterday} с прошлого дня)
-          </p>
-        )}
         <p className={`mt-1.5 ${planCaptionClass}`}>
           {moduleCount > 0 && <>из {moduleCount} модулей · </>}
           ≈ {minutes} мин на занятие

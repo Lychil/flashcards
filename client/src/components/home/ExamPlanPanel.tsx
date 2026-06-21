@@ -48,9 +48,6 @@ export function ExamPlanPanel({ hasPlan, forecast }: ExamPlanPanelProps) {
         Через {forecast.daysRemaining} дн. · сегодня {forecast.dailyPlan.reviewsPerDay} повт. +{' '}
         {forecast.dailyPlan.newCardsPerDay} нов.
       </p>
-      {forecast.behindMessage && (
-        <p className={`mt-2 ${planCaptionClass} leading-snug`} style={{ color: '#d97706' }}>{forecast.behindMessage}</p>
-      )}
     </section>
   )
 }

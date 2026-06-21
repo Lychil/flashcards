@@ -1,33 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ensureCardSrs } from '../lib/enrichFlashcards'
+import { mergeModuleCards } from '../lib/mergeModuleCards'
 import { applySrsRating, createDefaultSrs } from '../lib/spacedRepetition'
 import { cardRepository } from '../services/cardRepository'
 import type { Flashcard } from '../types/flashcard'
 import type { SrsRating } from '../types/srs'
 
-function mergeWithDefaults(seed: Flashcard[], persisted: Flashcard[] | null): Flashcard[] {
-  if (!persisted) {
-    return seed.map(ensureCardSrs)
-  }
-
-  const persistedById = new Map(persisted.map((c) => [c.id, c]))
-  const seedIds = new Set(seed.map((c) => c.id))
-
-  const merged = seed.map((card) => {
-    const saved = persistedById.get(card.id)
-    return saved ? { ...card, ...saved, srs: saved.srs ?? card.srs ?? createDefaultSrs() } : ensureCardSrs(card)
-  })
-
-  for (const card of persisted) {
-    if (!seedIds.has(card.id)) {
-      merged.push(ensureCardSrs(card))
-    }
-  }
-
-  return merged
-}
-
-export function useModuleCards(moduleId: string, seedCards: Flashcard[] | undefined) {
+export function useModuleCards(
+  moduleId: string,
+  seedCards: Flashcard[] | undefined,
+  options?: { requestRetention?: number; contentReadOnly?: boolean },
+) {
   const [cards, setCards] = useState<Flashcard[]>([])
   const [initialized, setInitialized] = useState(false)
 
@@ -35,7 +18,7 @@ export function useModuleCards(moduleId: string, seedCards: Flashcard[] | undefi
     if (!moduleId || seedCards === undefined) return
 
     const persisted = cardRepository.loadCards(moduleId)
-    setCards(mergeWithDefaults(seedCards, persisted))
+    setCards(mergeModuleCards(seedCards, persisted))
     setInitialized(true)
   }, [moduleId, seedCards])
 
@@ -47,23 +30,32 @@ export function useModuleCards(moduleId: string, seedCards: Flashcard[] | undefi
     [moduleId],
   )
 
+  const requestRetention = options?.requestRetention
+  const contentReadOnly = options?.contentReadOnly ?? false
+
   const rateCard = useCallback(
     (cardId: string, rating: SrsRating) => {
       setCards((prev) => {
         const next = prev.map((card) => {
           if (card.id !== cardId) return card
-          const srs = applySrsRating(card.srs ?? createDefaultSrs(), rating)
+          const srs = applySrsRating(
+            card.srs ?? createDefaultSrs(),
+            rating,
+            Date.now(),
+            requestRetention,
+          )
           return { ...card, srs }
         })
         if (moduleId) cardRepository.saveCards(moduleId, next)
         return next
       })
     },
-    [moduleId],
+    [moduleId, requestRetention],
   )
 
   const addCard = useCallback(
     (card: Omit<Flashcard, 'id'>) => {
+      if (contentReadOnly) return
       const next: Flashcard = {
         ...card,
         id: `local-${Date.now()}`,
@@ -75,22 +67,24 @@ export function useModuleCards(moduleId: string, seedCards: Flashcard[] | undefi
         return updated
       })
     },
-    [moduleId],
+    [moduleId, contentReadOnly],
   )
 
   const updateCard = useCallback(
     (cardId: string, patch: Partial<Omit<Flashcard, 'id'>>) => {
+      if (contentReadOnly) return
       setCards((prev) => {
         const next = prev.map((c) => (c.id === cardId ? { ...c, ...patch } : c))
         if (moduleId) cardRepository.saveCards(moduleId, next)
         return next
       })
     },
-    [moduleId],
+    [moduleId, contentReadOnly],
   )
 
   const deleteCards = useCallback(
     (ids: string[]) => {
+      if (contentReadOnly) return
       const idSet = new Set(ids)
       setCards((prev) => {
         const next = prev.filter((c) => !idSet.has(c.id))
@@ -98,7 +92,7 @@ export function useModuleCards(moduleId: string, seedCards: Flashcard[] | undefi
         return next
       })
     },
-    [moduleId],
+    [moduleId, contentReadOnly],
   )
 
   const replaceCards = useCallback(
@@ -110,6 +104,7 @@ export function useModuleCards(moduleId: string, seedCards: Flashcard[] | undefi
 
   const importCards = useCallback(
     (imported: Omit<Flashcard, 'id'>[], mode: 'merge' | 'replace') => {
+      if (contentReadOnly) return 0
       const nextCards = imported.map((card, index) => ({
         ...card,
         id: `import-${Date.now()}-${index}`,
@@ -124,7 +119,7 @@ export function useModuleCards(moduleId: string, seedCards: Flashcard[] | undefi
 
       return nextCards.length
     },
-    [moduleId],
+    [moduleId, contentReadOnly],
   )
 
   const saveAll = useCallback(
@@ -159,7 +154,7 @@ export function loadAllModuleCards(
   for (const id of moduleIds) {
     const seed = getSeed(id)
     const persisted = cardRepository.loadCards(id)
-    result[id] = mergeWithDefaults(seed, persisted)
+    result[id] = mergeModuleCards(seed, persisted)
   }
   return result
 }

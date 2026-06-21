@@ -1,9 +1,13 @@
+export const DEFAULT_PLAN_TARGET_READINESS_PERCENT = 90
+
 export interface ExamPlan {
   examDate: string
   moduleIds: string[]
   createdAt: number
   /** User-facing name for what they are preparing for */
   goalTitle?: string
+  /** Target mastery % by exam date */
+  targetReadinessPercent?: number
   /** ISO date (YYYY-MM-DD) → cards reviewed that day */
   dailyReviews: Record<string, number>
   /** ISO date (YYYY-MM-DD) → new cards introduced that day */
@@ -35,6 +39,7 @@ export interface ExamPlanForecast {
   behindMessage?: string
   extraCardsPerDay?: number
   daysBehind?: number
+  scheduleLagCards?: number
   /** Unified today load: new + reviews planned for today (same number as on home) */
   todayLoad: number
 }
@@ -58,8 +63,9 @@ export interface PlanDayEntry {
   status: PlanDayStatus
   isOverloaded: boolean
   readinessPercent: number
-  /** Shortfall rolled into today from yesterday */
-  carryoverFromYesterday?: number
+  /** Оставшиеся новые/повторы в очереди (для ячейки «сегодня» в календаре). */
+  remainingNew?: number
+  remainingReviews?: number
   moduleBreakdown?: { moduleId: string; title: string; new: number; reviews: number }[]
 }
 

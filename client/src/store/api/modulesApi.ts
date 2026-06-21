@@ -1,5 +1,7 @@
 import { createApi, fakeBaseQuery } from '@reduxjs/toolkit/query/react'
 import { getFlashcardsForModule } from '../../lib/mockFlashcards'
+import { mergeModuleCards } from '../../lib/mergeModuleCards'
+import { getLinkedCopyId } from '../../lib/moduleAccess'
 import { cardRepository } from '../../services/cardRepository'
 import { moduleFavoritesRepository } from '../../services/moduleFavoritesRepository'
 import { moduleRatingsRepository } from '../../services/moduleRatingsRepository'
@@ -108,6 +110,7 @@ export const mockModules: Module[] = [
     type: 'text',
     color: '#6BC9A7',
     author: mockAuthors.self,
+    visibility: 'private',
     favoriteCount: 0,
     rating: 0,
     lastReviewedAt: '2026-06-06T10:00:00Z',
@@ -538,6 +541,26 @@ export const mockModules: Module[] = [
     lastReviewedAt: '2026-05-24T11:00:00Z',
     updatedAt: '2026-06-02T10:00:00Z',
   },
+  {
+    id: '31',
+    title: 'Нервы верхней конечности',
+    description:
+      'Плечевое сплетение, основные периферические нервы и зоны их иннервации для практикумов.',
+    previewWords: ['Плечевое сплетение', 'Лучевой нерв', 'Срединный нерв', 'Локтевой нерв'],
+    wordCount: 14,
+    category: 'Анатомия',
+    track: 'medicine',
+    progress: 36,
+    type: 'interactive',
+    color: '#5B9FD4',
+    author: mockAuthors.self,
+    visibility: 'public',
+    favoriteCount: 0,
+    rating: 0,
+    folderId: 'f1',
+    lastReviewedAt: '2026-06-19T08:00:00Z',
+    updatedAt: '2026-06-19T08:00:00Z',
+  },
 ]
 
 function getAllModules(): Module[] {
@@ -546,12 +569,50 @@ function getAllModules(): Module[] {
   return [...userModules, ...mockModules.filter((m) => !userIds.has(m.id))]
 }
 
+function getOwnModules(): Module[] {
+  return getAllModules().filter((module) => module.author.id === mockUser.id)
+}
+
+function getOwnLibraryFolders(ownModules: Module[]): LibraryFolder[] {
+  const folderIds = new Set(
+    ownModules.map((module) => module.folderId).filter((id): id is string => Boolean(id)),
+  )
+
+  return mockFolders
+    .filter((folder) => folderIds.has(folder.id))
+    .map((folder) => ({
+      ...folder,
+      moduleCount: ownModules.filter((module) => module.folderId === folder.id).length,
+    }))
+}
+
+function getModuleById(id: string): Module | undefined {
+  const fromUser = userModuleRepository.loadAll().find((module) => module.id === id)
+  if (fromUser) return fromUser
+  return mockModules.find((module) => module.id === id)
+}
+
+function loadSeedFlashcards(module: Module): Flashcard[] {
+  const contentModuleId = module.sourceModuleId ?? module.id
+  const contentModule = getModuleById(contentModuleId)
+  if (!contentModule || contentModule.wordCount === 0) return []
+  return getFlashcardsForModule(contentModule.id, contentModule.previewWords)
+}
+
 function loadModuleFlashcards(module: Module): Flashcard[] {
+  const seed = loadSeedFlashcards(module)
   const persisted = cardRepository.loadCards(module.id)
-  if (persisted && persisted.length > 0) return persisted
+
+  if (persisted && persisted.length > 0) {
+    return mergeModuleCards(seed, persisted)
+  }
+
+  if (module.sourceModuleId) {
+    return mergeModuleCards(seed, null)
+  }
 
   if (module.wordCount > 0) {
-    return getFlashcardsForModule(module.id, module.previewWords)
+    return seed
   }
 
   return []
@@ -623,7 +684,7 @@ export const modulesApi = createApi({
       queryFn: async () => {
         await new Promise((resolve) => setTimeout(resolve, 250))
         return {
-          data: [...getAllModules()].sort(
+          data: [...getOwnModules()].sort(
             (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
           ),
         }
@@ -633,7 +694,7 @@ export const modulesApi = createApi({
     getLibraryFolders: builder.query<LibraryFolder[], void>({
       queryFn: async () => {
         await new Promise((resolve) => setTimeout(resolve, 150))
-        return { data: mockFolders }
+        return { data: getOwnLibraryFolders(getOwnModules()) }
       },
       providesTags: ['Modules'],
     }),
@@ -672,6 +733,53 @@ export const modulesApi = createApi({
         return { data: { module, flashcards } }
       },
       providesTags: (_result, _error, id) => [{ type: 'Modules', id }],
+    }),
+    copyModuleToLibrary: builder.mutation<Module, string>({
+      queryFn: async (moduleId) => {
+        await new Promise((resolve) => setTimeout(resolve, 150))
+
+        const source = getModuleById(moduleId)
+        if (!source) {
+          return { error: { status: 404, data: 'Module not found' } }
+        }
+
+        const canonicalSourceId = source.sourceModuleId ?? source.id
+
+        if (source.author.id === mockUser.id && !source.sourceModuleId) {
+          return { error: { status: 400, data: 'Already in library' } }
+        }
+
+        const existing = userModuleRepository
+          .loadAll()
+          .find((module) => module.sourceModuleId === canonicalSourceId)
+        if (existing) {
+          return { data: existing }
+        }
+
+        const contentModule = getModuleById(canonicalSourceId)
+        if (!contentModule) {
+          return { error: { status: 404, data: 'Source module not found' } }
+        }
+
+        const now = new Date().toISOString()
+        const copy: Module = {
+          ...contentModule,
+          id: getLinkedCopyId(canonicalSourceId),
+          sourceModuleId: canonicalSourceId,
+          author: mockAuthors.self,
+          visibility: 'private',
+          progress: 0,
+          favoriteCount: 0,
+          rating: 0,
+          folderId: undefined,
+          lastReviewedAt: now,
+          updatedAt: now,
+        }
+
+        userModuleRepository.save(copy)
+        return { data: copy }
+      },
+      invalidatesTags: ['Modules'],
     }),
     getModuleFavorites: builder.query<string[], void>({
       queryFn: async () => {
@@ -824,6 +932,7 @@ export const {
   useGetCurrentUserQuery,
   useSearchModulesQuery,
   useGetModuleQuery,
+  useCopyModuleToLibraryMutation,
   useGetModuleFavoritesQuery,
   useToggleModuleFavoriteMutation,
   useGetModuleRatingsQuery,

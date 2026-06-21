@@ -1,13 +1,37 @@
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { Module } from '../../types/module'
+import { DEFAULT_PLAN_TARGET_READINESS_PERCENT } from '../../types/examPlan'
 import { moduleGhostButtonClass, modulePrimaryButtonClass } from '../module/moduleStyles'
 import { textFieldInputClass } from '../ui/SearchBar'
 import { PLAN_PURPLE, planLabelClass, planSurfaceClass } from './examPlanStyles'
 
+const planSettingsInputClass = [textFieldInputClass, 'min-h-12'].join(' ')
+
+function PlanSettingsField({
+  label,
+  hint,
+  children,
+  className = '',
+}: {
+  label: string
+  hint?: string
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={['min-w-0', className].filter(Boolean).join(' ')}>
+      <span className={`mb-1 block ${planLabelClass}`}>{label}</span>
+      {children}
+      {hint ? <p className="mt-1 text-[12px] leading-snug text-text-tertiary">{hint}</p> : null}
+    </div>
+  )
+}
+
 interface ExamPlanSettingsProps {
   examDate: string
   goalTitle: string
+  targetReadinessPercent: number
   selectedIds: Set<string>
   modules: Module[]
   minDate: string
@@ -15,6 +39,7 @@ interface ExamPlanSettingsProps {
   hasPlan: boolean
   onExamDateChange: (value: string) => void
   onGoalTitleChange: (value: string) => void
+  onTargetReadinessChange: (value: number) => void
   onToggleModule: (id: string) => void
   onSave: () => void
   onReset?: () => void
@@ -26,6 +51,7 @@ interface ExamPlanSettingsProps {
 export function ExamPlanSettings({
   examDate,
   goalTitle,
+  targetReadinessPercent,
   selectedIds,
   modules,
   minDate,
@@ -33,6 +59,7 @@ export function ExamPlanSettings({
   hasPlan,
   onExamDateChange,
   onGoalTitleChange,
+  onTargetReadinessChange,
   onToggleModule,
   onSave,
   onReset,
@@ -44,30 +71,57 @@ export function ExamPlanSettings({
   const expanded = embedded || open
 
   const fields = (
-    <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block min-w-0">
-          <span className={`mb-1.5 block ${planLabelClass}`}>Дата экзамена</span>
+    <div className="space-y-4">
+      <div className="grid gap-x-3 gap-y-1.5 sm:grid-cols-2">
+        <PlanSettingsField label="Дата экзамена">
           <input
             type="date"
             value={examDate}
             min={minDate}
             onChange={(e) => onExamDateChange(e.target.value)}
-            className={textFieldInputClass}
+            className={planSettingsInputClass}
           />
-        </label>
+        </PlanSettingsField>
 
-        <label className="block min-w-0 sm:col-span-1">
-          <span className={`mb-1.5 block ${planLabelClass}`}>Цель плана</span>
+        <PlanSettingsField
+          label="Цель плана"
+          hint="Например: уверенно сдать экзамен по анатомии"
+        >
           <input
             type="text"
             value={goalTitle}
             onChange={(e) => onGoalTitleChange(e.target.value)}
-            placeholder="Например: уверенно сдать экзамен по анатомии"
+            placeholder="Сформулируйте, к чему готовитесь"
             maxLength={120}
-            className={textFieldInputClass}
+            className={planSettingsInputClass}
           />
-        </label>
+        </PlanSettingsField>
+
+        <PlanSettingsField label="Цель к экзамену" className="sm:max-w-[11rem]">
+          <div className="relative">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={50}
+              max={100}
+              step={1}
+              value={targetReadinessPercent}
+              onChange={(e) => {
+                const next = Number.parseInt(e.target.value, 10)
+                if (Number.isNaN(next)) {
+                  onTargetReadinessChange(DEFAULT_PLAN_TARGET_READINESS_PERCENT)
+                  return
+                }
+                onTargetReadinessChange(Math.min(100, Math.max(50, next)))
+              }}
+              aria-label="Цель к экзамену в процентах"
+              className={[planSettingsInputClass, 'pr-10'].join(' ')}
+            />
+            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[14px] text-text-tertiary">
+              %
+            </span>
+          </div>
+        </PlanSettingsField>
       </div>
 
       <fieldset>
@@ -93,7 +147,7 @@ export function ExamPlanSettings({
         </div>
       </fieldset>
 
-      <div className="flex flex-wrap gap-2 pt-1">
+      <div className="flex flex-wrap gap-2 pb-1 pt-1">
         <button
           type="button"
           onClick={onSave}

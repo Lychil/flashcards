@@ -47,8 +47,9 @@ function resolveNewCardLimit(
   const remainingFromCap = Math.max(0, DAILY_NEW_CARD_LIMIT - newCardsAlreadyToday)
 
   if (todayEntry && todayEntry.status === 'today') {
-    const plannedNew = Math.max(0, todayEntry.plannedNew)
-    return Math.min(remainingFromCap, plannedNew)
+    const dailyTarget = Math.max(0, todayEntry.plannedNew)
+    const remainingFromPlan = Math.max(0, dailyTarget - newCardsAlreadyToday)
+    return Math.min(remainingFromCap, remainingFromPlan)
   }
 
   if (plan) {
@@ -85,6 +86,9 @@ export function buildTodaySession(
   const newCandidates: ReviewQueueItem[] = []
   const moduleIds = new Set<string>()
 
+  const newAlreadyToday = getNewCardsAlreadyToday(plan, todayKey)
+  const newLimit = resolveNewCardLimit(plan, opts.todayEntry ?? null, newAlreadyToday)
+
   for (const mod of activeModules) {
     const cards = cardsByModule[mod.id] ?? []
     for (const card of cards) {
@@ -109,10 +113,9 @@ export function buildTodaySession(
     }
   }
 
-  const newAlreadyToday = getNewCardsAlreadyToday(plan, todayKey)
-  const newLimit = resolveNewCardLimit(plan, opts.todayEntry ?? null, newAlreadyToday)
-
-  const newItems = newCandidates.slice(0, newLimit)
+  const newItems = newCandidates
+    .sort((a, b) => a.card.id.localeCompare(b.card.id))
+    .slice(0, newLimit)
   for (const item of newItems) {
     moduleIds.add(item.moduleId)
   }

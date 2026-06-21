@@ -1,4 +1,4 @@
-import { Settings } from 'lucide-react'
+import { PenLine } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { ExamPlanCalendarGrid } from '../components/exam-plan/ExamPlanCalendarGrid'
 import { ExamPlanOnboarding } from '../components/exam-plan/ExamPlanOnboarding'
@@ -16,6 +16,7 @@ import { PageLayout } from '../components/layout/PageLayout'
 import { useAllModulesCards } from '../hooks/useGlobalReviewQueue'
 import { useExamPlan } from '../hooks/useExamPlan'
 import { toDateKey } from '../lib/examPlan'
+import { DEFAULT_PLAN_TARGET_READINESS_PERCENT } from '../types/examPlan'
 
 export function ExamPlanPage() {
   const { modules, cardsByModule } = useAllModulesCards()
@@ -26,18 +27,25 @@ export function ExamPlanPage() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [draftExamDate, setDraftExamDate] = useState('')
   const [draftGoalTitle, setDraftGoalTitle] = useState('')
+  const [draftTargetReadinessPercent, setDraftTargetReadinessPercent] = useState(
+    DEFAULT_PLAN_TARGET_READINESS_PERCENT,
+  )
   const [draftSelectedIds, setDraftSelectedIds] = useState<Set<string>>(new Set())
 
   const syncDraftFromSaved = useCallback(() => {
     if (plan) {
       setDraftExamDate(plan.examDate)
       setDraftGoalTitle(plan.goalTitle ?? '')
+      setDraftTargetReadinessPercent(
+        plan.targetReadinessPercent ?? DEFAULT_PLAN_TARGET_READINESS_PERCENT,
+      )
       setDraftSelectedIds(new Set(plan.moduleIds))
       return
     }
 
     setDraftExamDate('')
     setDraftGoalTitle('')
+    setDraftTargetReadinessPercent(DEFAULT_PLAN_TARGET_READINESS_PERCENT)
     setDraftSelectedIds(
       modulesWithCards.length > 0
         ? new Set(modulesWithCards.slice(0, 2).map((m) => m.id))
@@ -50,12 +58,15 @@ export function ExamPlanPage() {
       return Boolean(draftExamDate && draftSelectedIds.size > 0)
     }
 
+    const savedTarget = plan.targetReadinessPercent ?? DEFAULT_PLAN_TARGET_READINESS_PERCENT
+
     return (
       plan.examDate !== draftExamDate ||
       (plan.goalTitle ?? '') !== draftGoalTitle.trim() ||
+      savedTarget !== draftTargetReadinessPercent ||
       !sameSet(plan.moduleIds, draftSelectedIds)
     )
-  }, [plan, draftExamDate, draftGoalTitle, draftSelectedIds])
+  }, [plan, draftExamDate, draftGoalTitle, draftTargetReadinessPercent, draftSelectedIds])
 
   const hasUnsavedChanges = Boolean(plan && isDraftDirty)
 
@@ -83,7 +94,7 @@ export function ExamPlanPage() {
 
   const handleSave = () => {
     if (!draftExamDate || draftSelectedIds.size === 0) return
-    setExamPlan(draftExamDate, [...draftSelectedIds], draftGoalTitle)
+    setExamPlan(draftExamDate, [...draftSelectedIds], draftGoalTitle, draftTargetReadinessPercent)
     setSettingsOpen(false)
   }
 
@@ -99,19 +110,20 @@ export function ExamPlanPage() {
       />
 
       <div className="grid grid-cols-1 items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(320px,440px)] xl:gap-8">
-        <div className="flex min-w-0 items-center justify-between gap-3 xl:col-start-1 xl:row-start-1">
+        <div className="flex min-w-0 items-center justify-between gap-2 xl:col-start-1 xl:row-start-1">
           <h1 className={`min-w-0 ${planPageTitleClass}`}>План подготовки</h1>
           <button
             type="button"
             onClick={openSettings}
+            aria-label="Настроить план"
             className={[
               moduleGhostButtonClass,
-              'inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium',
+              'inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-[13px] font-medium sm:px-4',
               settingsOpen && isDraftDirty ? 'border-accent/30 bg-accent-muted/40 text-accent' : '',
             ].join(' ')}
           >
-            <Settings size={15} strokeWidth={2} />
-            Настроить план
+            <PenLine size={15} strokeWidth={2} />
+            <span className="hidden sm:inline">Настроить план</span>
           </button>
         </div>
 
@@ -131,7 +143,7 @@ export function ExamPlanPage() {
           )}
 
           {hasCalendar && schedule ? (
-            <section className={`${planBlockClass} w-full overflow-visible`}>
+            <section className={`${planBlockClass} w-full min-w-0`}>
               <ExamPlanCalendarGrid
                 days={schedule.days}
                 rangeFrom={schedule.calendarFrom}
@@ -154,6 +166,7 @@ export function ExamPlanPage() {
         onClose={closeSettings}
         examDate={draftExamDate}
         goalTitle={draftGoalTitle}
+        targetReadinessPercent={draftTargetReadinessPercent}
         selectedIds={draftSelectedIds}
         modules={modulesWithCards}
         minDate={minDate}
@@ -162,6 +175,7 @@ export function ExamPlanPage() {
         canReset={hasUnsavedChanges}
         onExamDateChange={setDraftExamDate}
         onGoalTitleChange={setDraftGoalTitle}
+        onTargetReadinessChange={setDraftTargetReadinessPercent}
         onToggleModule={toggleModule}
         onSave={handleSave}
         onReset={handleResetChanges}

@@ -3,8 +3,8 @@ import {
   BookOpen,
   ChevronsLeft,
   ChevronsRight,
+  CreditCard,
   Layers,
-  GraduationCap,
   LayoutDashboard,
   Map,
   X,
@@ -32,19 +32,19 @@ const navSections: NavSection[] = [
     items: [
       { to: '/', label: 'Главная', icon: LayoutDashboard, end: true },
       { to: '/library', label: 'Моя библиотека', icon: BookOpen },
+      { to: '/diagrams', label: 'Интерактивные диаграммы', icon: Map, badge: '12' },
     ],
   },
   {
     title: 'Контент',
     items: [
       { to: '/collections', label: 'Подборки', icon: Layers, end: true },
-      { to: '/diagrams', label: 'Интерактивные диаграммы', icon: Map, badge: '12' },
     ],
   },
   {
-    title: 'Управление',
+    title: 'Аккаунт',
     items: [
-      { to: '/classes', label: 'Классы / Ученики', icon: GraduationCap, badge: '3' },
+      { to: '/subscription', label: 'Подписка', icon: CreditCard },
     ],
   },
 ]

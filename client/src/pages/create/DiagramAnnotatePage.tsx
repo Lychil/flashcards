@@ -4,6 +4,7 @@ import { DiagramMarkerEditor } from '../../components/diagram/DiagramMarkerEdito
 import { PageBreadcrumbs } from '../../components/layout/PageBreadcrumbs'
 import { PageLayout } from '../../components/layout/PageLayout'
 import { Button } from '../../components/ui/Button'
+import { diagramRepository } from '../../services/diagramRepository'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { clearDiagramDraft, setDiagramMarkers } from '../../store/slices/diagramDraftSlice'
 import type { DiagramMarker } from '../../types/diagram'
@@ -31,8 +32,14 @@ export function DiagramAnnotatePage() {
   const canSave = markers.length > 0 && labeledCount === markers.length
 
   const handleSave = () => {
+    const saved = diagramRepository.create({
+      title: draft.title || 'Новая диаграмма',
+      description: draft.description,
+      imageDataUrl: draft.imageDataUrl!,
+      markers,
+    })
     dispatch(clearDiagramDraft())
-    navigate('/diagrams')
+    navigate(`/diagrams/${saved.id}`)
   }
 
   return (

@@ -4,25 +4,57 @@ import {
   generatorParameters,
   Rating,
   State,
+  TypeConvert,
   type Card,
   type Grade,
 } from 'ts-fsrs'
 import type { Flashcard } from '../types/flashcard'
 import type { CardDifficultyLevel, CardSrsData, SrsRating, SrsVisualStatus } from '../types/srs'
+import { DEFAULT_PLAN_TARGET_READINESS_PERCENT } from '../types/examPlan'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+/** Default when no exam plan target is set (90%). */
 export const TARGET_RETENTION = 0.9
+
+const fsrsCache = new Map<number, FSRS>()
+
+export function clampRequestRetention(fraction: number): number {
+  return Math.min(1, Math.max(0.5, fraction))
+}
+
+/** Exam-plan target % (50–100) → FSRS `request_retention` (0.5–1). */
+export function requestRetentionFromPercent(percent: number): number {
+  return clampRequestRetention(percent / 100)
+}
+
+export function getFsrsEngine(requestRetention = TARGET_RETENTION): FSRS {
+  const key = Math.round(clampRequestRetention(requestRetention) * 1000) / 1000
+  let engine = fsrsCache.get(key)
+  if (!engine) {
+    engine = new FSRS(
+      generatorParameters({
+        request_retention: key,
+        enable_fuzz: false,
+      }),
+    )
+    fsrsCache.set(key, engine)
+  }
+  return engine
+}
+
+/** Cached default engine — same as `getFsrsEngine(TARGET_RETENTION)`. */
+export const fsrs = getFsrsEngine(TARGET_RETENTION)
 
 /** Max new cards introduced per day when no exam plan overrides */
 export const DAILY_NEW_CARD_LIMIT = 15
 
-export const fsrs = new FSRS(
-  generatorParameters({
-    request_retention: TARGET_RETENTION,
-    enable_fuzz: false,
-  }),
-)
+export function getPlanRequestRetention(
+  plan?: { targetReadinessPercent?: number } | null,
+): number {
+  const percent = plan?.targetReadinessPercent ?? DEFAULT_PLAN_TARGET_READINESS_PERCENT
+  return requestRetentionFromPercent(percent)
+}
 
 const RATING_MAP: Record<SrsRating, Grade> = {
   again: Rating.Again,
@@ -67,7 +99,7 @@ export function fromFsrsCard(card: Card): CardSrsData {
 export function toFsrsCard(srs: CardSrsData | LegacySrs | undefined, now = Date.now()): Card {
   if (!srs) return createEmptyCard(new Date(now))
   if (isFsrsV2(srs)) {
-    return {
+    return TypeConvert.card({
       due: new Date(srs.due),
       stability: srs.stability,
       difficulty: srs.difficulty,
@@ -78,9 +110,17 @@ export function toFsrsCard(srs: CardSrsData | LegacySrs | undefined, now = Date.
       lapses: srs.lapses,
       state: srs.state as State,
       last_review: srs.lastReview ? new Date(srs.lastReview) : undefined,
-    }
+    })
   }
   return migrateLegacySrs(srs as LegacySrs, now)
+}
+
+/** FSRS / Anki rule: non-new card is due when scheduled date has passed. */
+export function isFsrsCardDue(card: Card, at: Date | number = Date.now()): boolean {
+  const normalized = TypeConvert.card(card)
+  if (normalized.state === State.New) return false
+  const ts = typeof at === 'number' ? at : at.getTime()
+  return normalized.due.getTime() <= ts
 }
 
 function migrateLegacySrs(legacy: LegacySrs, now: number): Card {
@@ -102,9 +142,11 @@ export function applySrsRating(
   srs: CardSrsData | LegacySrs | undefined,
   rating: SrsRating,
   now = Date.now(),
+  requestRetention?: number,
 ): CardSrsData {
   const card = toFsrsCard(srs, now)
-  const result = fsrs.next(card, new Date(now), RATING_MAP[rating])
+  const engine = getFsrsEngine(requestRetention ?? TARGET_RETENTION)
+  const result = engine.next(card, new Date(now), RATING_MAP[rating])
   return fromFsrsCard(result.card)
 }
 
@@ -121,9 +163,7 @@ export function startOfDay(date: Date): Date {
 }
 
 export function isCardDue(card: Flashcard, now = Date.now()): boolean {
-  const fsrsCard = toFsrsCard(card.srs, now)
-  if (fsrsCard.state === State.New) return false
-  return fsrsCard.due.getTime() <= now
+  return isFsrsCardDue(toFsrsCard(card.srs, now), now)
 }
 
 export function isNewCard(card: Flashcard): boolean {
@@ -134,10 +174,11 @@ export function getDueTimestamp(card: Flashcard): number {
   return toFsrsCard(card.srs).due.getTime()
 }
 
-export function getRetrievability(card: Flashcard, at = Date.now()): number {
+export function getRetrievability(card: Flashcard, at = Date.now(), requestRetention?: number): number {
   const fsrsCard = toFsrsCard(card.srs, at)
   if (fsrsCard.state === State.New) return 0
-  return fsrs.get_retrievability(fsrsCard, new Date(at), false)
+  const engine = getFsrsEngine(requestRetention ?? TARGET_RETENTION)
+  return engine.get_retrievability(fsrsCard, new Date(at), false)
 }
 
 export function getDifficultyLevel(card: Flashcard): CardDifficultyLevel {
@@ -252,7 +293,7 @@ export function getCardsDueBefore(cards: Flashcard[], before: Date, now = Date.n
   const ts = before.getTime()
   return cards.filter((c) => {
     const fc = toFsrsCard(c.srs, now)
-    return fc.state !== State.New && fc.due.getTime() <= ts
+    return isFsrsCardDue(fc, ts)
   })
 }
 
@@ -261,11 +302,11 @@ export function simulateReview(card: Flashcard, rating: SrsRating, at: Date): Ca
 }
 
 export function cloneFsrsCard(card: Card): Card {
-  return {
+  return TypeConvert.card({
     ...card,
     due: new Date(card.due),
     last_review: card.last_review ? new Date(card.last_review) : undefined,
-  }
+  })
 }
 
 export function flashcardFromSim(id: string, term: string, definition: string, fc: Card): Flashcard {

@@ -29,7 +29,8 @@ export const examPlanRepository: ExamPlanRepository = {
       normalized.isMock !== plan.isMock ||
       normalized.schemaVersion !== plan.schemaVersion ||
       normalized.userConfirmed !== plan.userConfirmed ||
-      normalized.goalTitle !== plan.goalTitle
+      normalized.goalTitle !== plan.goalTitle ||
+      normalized.targetReadinessPercent !== plan.targetReadinessPercent
     ) {
       localStorage.setItem(STORAGE_KEYS.examPlan, JSON.stringify(normalized))
     }

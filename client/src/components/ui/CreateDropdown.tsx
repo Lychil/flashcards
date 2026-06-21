@@ -118,22 +118,27 @@ export function CreateDropdown() {
         aria-expanded={open}
         aria-haspopup="menu"
         aria-controls={menuId}
+        aria-label="Создать"
         onClick={() => setOpen((prev) => !prev)}
         className={[
-          'inline-flex items-center gap-2 cursor-pointer',
-          'h-10 px-4 rounded-xl border border-border bg-white',
+          'inline-flex cursor-pointer items-center justify-center gap-2',
+          'h-10 rounded-xl border border-border bg-white',
           'text-[13px] font-medium text-text-primary',
           'hover:border-text-tertiary/40 hover:bg-surface-subtle',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+          'w-10 px-0 sm:w-auto sm:justify-start sm:px-4',
           open ? 'border-text-tertiary/40 bg-surface-subtle' : '',
         ].join(' ')}
       >
         <Plus size={15} strokeWidth={1.5} />
-        Создать
+        <span className="hidden sm:inline">Создать</span>
         <ChevronDown
           size={14}
           strokeWidth={1.5}
-          className={['text-text-tertiary transition-transform duration-200', open ? 'rotate-180' : ''].join(' ')}
+          className={[
+            'hidden text-text-tertiary transition-transform duration-200 sm:block',
+            open ? 'rotate-180' : '',
+          ].join(' ')}
         />
       </button>
 

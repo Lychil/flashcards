@@ -8,7 +8,7 @@ import { EmptyPlaceholder } from '../components/ui/ContentPlaceholder'
 import { useExamPlan } from '../hooks/useExamPlan'
 import { useAllModulesCards } from '../hooks/useGlobalReviewQueue'
 import { cardRepository } from '../services/cardRepository'
-import { applySrsRating, createDefaultSrs } from '../lib/spacedRepetition'
+import { applySrsRating, createDefaultSrs, getPlanRequestRetention } from '../lib/spacedRepetition'
 import { recordCardReview } from '../lib/moduleStudyActivity'
 import { buildTodaySession } from '../lib/reviewQueue'
 import { PLAN_PURPLE } from '../components/exam-plan/examPlanStyles'
@@ -37,12 +37,19 @@ export function ReviewSessionPage() {
     [session.items],
   )
 
+  const requestRetention = useMemo(() => getPlanRequestRetention(plan), [plan])
+
   const handleRate = useCallback(
     (cardId: string, rating: SrsRating) => {
       const item = session.items.find((i) => i.card.id === cardId)
       if (!item) return
 
-      const updatedSrs = applySrsRating(item.card.srs ?? createDefaultSrs(), rating)
+      const updatedSrs = applySrsRating(
+        item.card.srs ?? createDefaultSrs(),
+        rating,
+        Date.now(),
+        requestRetention,
+      )
       const updatedCard = { ...item.card, srs: updatedSrs }
 
       syncStudyProgress(item.moduleId, item.card)
@@ -55,7 +62,7 @@ export function ReviewSessionPage() {
 
       recordCardReview(item.moduleId)
     },
-    [session.items, cardsByModule, syncStudyProgress],
+    [session.items, cardsByModule, syncStudyProgress, requestRetention],
   )
 
   const accentColor = session.items[0]?.moduleColor ?? PLAN_PURPLE

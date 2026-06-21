@@ -1,12 +1,12 @@
-import { HelpCircle, X } from 'lucide-react'
+import { HelpCircle } from 'lucide-react'
 import { useState } from 'react'
+import { moduleGhostButtonClass } from '../module/moduleStyles'
+import { ModalOverlay } from '../ui/ModalOverlay'
 import {
   PLAN_EXPLANATION,
   PLAN_ICON_LABELS,
   planBodyClass,
   planCaptionClass,
-  planOnboardingActionClass,
-  planSubsectionTitleClass,
 } from './examPlanStyles'
 
 const EXPLAIN_DETAILS = [
@@ -36,40 +36,23 @@ export function ExamPlanExplain() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={planOnboardingActionClass}
+        className={[moduleGhostButtonClass, 'border border-border'].join(' ')}
         aria-label="Как составлен план"
       >
         <HelpCircle size={15} strokeWidth={2} />
         Как составлен план
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/20 p-4 sm:items-center sm:p-6"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="max-h-[min(90vh,880px)] w-full max-w-3xl overflow-y-auto rounded-[22px] border border-border bg-white p-5 sm:p-6 lg:max-w-4xl lg:p-8"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <h3 className={planSubsectionTitleClass}>Как составлен план</h3>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Закрыть">
-                <X size={18} strokeWidth={2} className="text-text-tertiary" />
-              </button>
-            </div>
-            <p className={`max-w-none ${planBodyClass}`}>{PLAN_EXPLANATION}</p>
-            <ul className={`mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-8 lg:gap-y-5 ${planCaptionClass}`}>
-              {EXPLAIN_DETAILS.map((item) => (
-                <li key={item.term} className="min-w-0">
-                  <span className="font-medium text-text-primary">{item.term}.</span>{' '}
-                  {item.text}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
+      <ModalOverlay open={open} onClose={() => setOpen(false)} title="Как составлен план">
+        <p className={`max-w-none ${planBodyClass}`}>{PLAN_EXPLANATION}</p>
+        <ul className={`mt-5 grid gap-4 sm:grid-cols-2 sm:gap-x-8 lg:gap-y-5 ${planCaptionClass}`}>
+          {EXPLAIN_DETAILS.map((item) => (
+            <li key={item.term} className="min-w-0">
+              <span className="font-medium text-text-primary">{item.term}.</span> {item.text}
+            </li>
+          ))}
+        </ul>
+      </ModalOverlay>
     </>
   )
 }

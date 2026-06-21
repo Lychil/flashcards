@@ -1,4 +1,5 @@
 import type { ExamPlan } from '../types/examPlan'
+import { DEFAULT_PLAN_TARGET_READINESS_PERCENT } from '../types/examPlan'
 import {
   createDefaultExamPlan,
   daysBetween,
@@ -16,6 +17,15 @@ export const MOCK_GOAL_TITLE = 'Уверенно сдать экзамен по 
 function withMockGoalTitle(plan: ExamPlan): ExamPlan {
   if (plan.goalTitle?.trim()) return plan
   return { ...plan, goalTitle: MOCK_GOAL_TITLE }
+}
+
+function withDefaultTargetReadiness(plan: ExamPlan): ExamPlan {
+  if (plan.targetReadinessPercent != null) return plan
+  return { ...plan, targetReadinessPercent: DEFAULT_PLAN_TARGET_READINESS_PERCENT }
+}
+
+function normalizePlanDefaults(plan: ExamPlan): ExamPlan {
+  return withDefaultTargetReadiness(withMockGoalTitle(plan))
 }
 
 export function examDateDaysAhead(days: number, from = Date.now()): string {
@@ -36,11 +46,12 @@ export function createMockExamPlan(moduleIds: string[], now = Date.now()): ExamP
   plan.isMock = true
   plan.schemaVersion = EXAM_PLAN_SCHEMA_VERSION
   plan.goalTitle = MOCK_GOAL_TITLE
+  plan.targetReadinessPercent = DEFAULT_PLAN_TARGET_READINESS_PERCENT
   return plan
 }
 
 export function refreshMockExamPlan(plan: ExamPlan, now = Date.now()): ExamPlan {
-  return withMockGoalTitle({
+  return normalizePlanDefaults({
     ...plan,
     isMock: true,
     schemaVersion: EXAM_PLAN_SCHEMA_VERSION,
@@ -62,8 +73,8 @@ export function normalizeStoredExamPlan(plan: ExamPlan, now = Date.now()): ExamP
   }
 
   if ((plan.schemaVersion ?? 1) !== EXAM_PLAN_SCHEMA_VERSION) {
-    return withMockGoalTitle({ ...plan, schemaVersion: EXAM_PLAN_SCHEMA_VERSION })
+    return normalizePlanDefaults({ ...plan, schemaVersion: EXAM_PLAN_SCHEMA_VERSION })
   }
 
-  return withMockGoalTitle(plan)
+  return normalizePlanDefaults(plan)
 }

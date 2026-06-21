@@ -1,5 +1,8 @@
 export type ModuleType = 'text' | 'interactive'
 
+/** public — открыт для всех, private — закрыт (только автор) */
+export type ModuleVisibility = 'public' | 'private'
+
 /** Целевая аудитория для глобального каталога */
 export type ModuleTrack = 'ege' | 'university' | 'medicine' | 'school' | 'languages' | 'profession'
 
@@ -23,6 +26,10 @@ export interface Module {
   color?: string
   folderId?: string
   author: ModuleAuthor
+  /** По умолчанию public */
+  visibility?: ModuleVisibility
+  /** Ссылка на оригинал — копия в библиотеке пользователя */
+  sourceModuleId?: string
   favoriteCount: number
   rating: number
   lastReviewedAt: string

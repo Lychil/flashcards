@@ -11,7 +11,16 @@ import {
   recordCardReview,
 } from '../lib/moduleStudyActivity'
 import { recordStudyForPlan } from '../lib/planStudySync'
+import { getPlanRequestRetention } from '../lib/spacedRepetition'
+import { examPlanRepository } from '../services/examPlanRepository'
 import { useModuleCards } from '../hooks/useModuleCards'
+import {
+  canEditModuleContent,
+  canSetModuleSrsStatus,
+  canViewModuleSrs,
+  isModuleLinkedCopy,
+  isModuleOwner,
+} from '../lib/moduleAccess'
 import { PageLayout } from '../components/layout/PageLayout'
 import { PageBreadcrumbs } from '../components/layout/PageBreadcrumbs'
 import { EmptyPlaceholder, LoadingPlaceholder } from '../components/ui/ContentPlaceholder'
@@ -21,6 +30,7 @@ import {
   ModulePageHeader,
 } from '../components/module/ModulePageHeader'
 import { ModuleImportExport } from '../components/module/ModuleImportExport'
+import { ModuleCopyAction } from '../components/module/ModuleCopyAction'
 import { StudyModeGrid } from '../components/module/StudyModeGrid'
 import { StudyStats } from '../components/stats/StudyStats'
 import { AnagramGame } from '../components/module/study/AnagramGame'
@@ -46,6 +56,15 @@ export function ModulePage() {
 
   const { data: currentUser } = useGetCurrentUserQuery()
   const { data, isLoading, isError } = useGetModuleQuery(id, { skip: !id })
+  const contentReadOnly = useMemo(
+    () => !(data?.module && canEditModuleContent(data.module, currentUser?.id)),
+    [data?.module, currentUser?.id],
+  )
+  const requestRetention = useMemo(() => {
+    const plan = examPlanRepository.load()
+    if (!plan?.moduleIds.includes(id)) return undefined
+    return getPlanRequestRetention(plan)
+  }, [id])
   const {
     cards,
     rateCard: handleSrsRate,
@@ -53,7 +72,10 @@ export function ModulePage() {
     updateCard: handleUpdateCard,
     deleteCards: handleDeleteCards,
     importCards,
-  } = useModuleCards(id, data?.flashcards)
+  } = useModuleCards(id, data?.flashcards, {
+    requestRetention,
+    contentReadOnly,
+  })
   const [cardFilter, setCardFilter] = useState<CardFilter>('all')
   const [studyCards, setStudyCards] = useState<Flashcard[]>([])
   const [studyActivity, setStudyActivity] = useState<ModuleStudyActivity>({ reviewsByDate: {} })
@@ -173,6 +195,11 @@ export function ModulePage() {
   }
 
   const { module } = data
+  const isLinkedCopy = isModuleLinkedCopy(module)
+  const isOwner = isModuleOwner(module, currentUser?.id)
+  const canEditContent = canEditModuleContent(module, currentUser?.id)
+  const showSrs = canViewModuleSrs(module, currentUser?.id)
+  const canSetSrsStatus = canSetModuleSrsStatus(module, currentUser?.id)
   const moduleAccent = getCardColorTheme(resolveModuleBaseColor(module.id, module.color)).base
   const breadcrumbItems = getModuleBreadcrumbItems(module, activeMode)
   const activeStudyCards = studyCards.length > 0 ? studyCards : sessionCards
@@ -235,7 +262,14 @@ export function ModulePage() {
           {renderStudyMode()}
         </>
       ) : (
-        <div className="grid grid-cols-1 items-start gap-8 xl:grid-cols-[70fr_30fr] xl:gap-12">
+        <div
+          className={[
+            'grid grid-cols-1 items-start gap-8',
+            isOwner && cards.length > 0 ? 'xl:grid-cols-[70fr_30fr] xl:gap-12' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           <div className="flex min-w-0 flex-col gap-8">
             <ModulePageHeader
               module={module}
@@ -243,11 +277,18 @@ export function ModulePage() {
               hideBreadcrumbs
               variant="compact"
               headerActions={
-                <ModuleImportExport
-                  moduleTitle={module.title}
-                  cards={cards}
-                  onImport={handleImportCards}
-                />
+                <>
+                  {!isLinkedCopy && !isOwner && currentUser && (
+                    <ModuleCopyAction sourceModuleId={module.sourceModuleId ?? module.id} />
+                  )}
+                  {canEditContent && (
+                    <ModuleImportExport
+                      moduleTitle={module.title}
+                      cards={cards}
+                      onImport={handleImportCards}
+                    />
+                  )}
+                </>
               }
             />
 
@@ -268,10 +309,14 @@ export function ModulePage() {
               onAdd={handleAddCard}
               onUpdate={handleUpdateCard}
               onDelete={handleDeleteCards}
+              readOnly={!canEditContent}
+              showSrs={showSrs}
+              canSetSrsStatus={canSetSrsStatus}
+              onRate={handleSrsRate}
             />
           </div>
 
-          {cards.length > 0 && (
+          {isOwner && cards.length > 0 && (
             <aside className="min-w-0 border-t border-border pt-8 xl:sticky xl:top-0 xl:max-h-[calc(100dvh-3.5rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain xl:border-t-0 xl:pt-0">
               <StudyStats
                 layout="compact"

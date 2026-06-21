@@ -4,6 +4,7 @@ export {
   createDefaultSrs,
   formatNextReview,
   getModuleSrsStats,
+  getPlanRequestRetention,
   getSrsVisualStatus,
   inferRatingFromCorrectness,
   isCardDue,
